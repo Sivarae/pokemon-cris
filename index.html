@@ -1,0 +1,1359 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#d6403a" id="themeColor">
+<meta name="color-scheme" content="light dark">
+<script>
+(function () {
+  var t = null;
+  try { t = localStorage.getItem('cries-theme'); } catch (e) {}
+  if (t !== 'light' && t !== 'dark') {
+    t = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  }
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+<title>Cris Pokémon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --accent: #d6403a;
+    --ink: #1a2230;
+    --muted: #5d6675;
+    --paper: #eceff3;
+    --tile: #ffffff;
+    --line: #d5dae2;
+    --bar: #1a2230;
+    --accent-ui: var(--accent);
+    --hero-bg: color-mix(in srgb, var(--accent) 14%, #fff);
+    color-scheme: light;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    font-family: "Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink);
+  }
+  /* ---------- Mode sombre ---------- */
+  :root[data-theme="dark"] {
+    --ink: #e8ecf2;
+    --muted: #9aa5b6;
+    --paper: #0f141c;
+    --tile: #1a2230;
+    --line: #2c3646;
+    --bar: #141b26;
+    --accent-ui: color-mix(in srgb, var(--accent) 70%, #fff);
+    --hero-bg: color-mix(in srgb, var(--accent) 25%, #2b3446);
+    color-scheme: dark;
+  }
+  /* un fond clair derrière les Pokémon, pour que les sombres restent visibles */
+  :root[data-theme="dark"] .mon img,
+  :root[data-theme="dark"] .gmon img,
+  :root[data-theme="dark"] .evo-mon img { background: #ffffff1f; border-radius: 50%; }
+
+  *, *::before, *::after { box-sizing: inherit; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    margin: 0;
+    background: var(--paper);
+    padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
+    -webkit-tap-highlight-color: transparent;
+  }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--accent-ui); outline-offset: 2px; }
+
+  header { padding: 18px 16px 6px; }
+  h1 { margin: 0; font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; }
+  .sub { margin: 2px 0 0; color: var(--muted); font-size: 0.95rem; }
+  .head-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+
+  .controls {
+    position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--tabs-h)); z-index: 5;
+    background: var(--paper);
+    padding: 10px 0 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .gens {
+    display: flex; gap: 8px; overflow-x: auto; padding: 0 16px 10px;
+    scrollbar-width: none; scroll-snap-type: x proximity;
+  }
+  .gens::-webkit-scrollbar { display: none; }
+  .gen, .gchip {
+    flex: none; scroll-snap-align: start;
+    border: 2px solid var(--line); background: var(--tile);
+    border-radius: 14px; padding: 8px 14px; min-height: 48px;
+    text-align: left; cursor: pointer; line-height: 1.15;
+  }
+  .gen b, .gchip b { display: block; font-size: 1.15rem; font-weight: 800; }
+  .gen span, .gchip span { font-size: 0.78rem; color: var(--muted); }
+  .gen[aria-pressed="true"], .gchip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent-ui); color: #fff; }
+  .gen[aria-pressed="true"] span, .gchip[aria-pressed="true"] span { color: rgba(255,255,255,.85); }
+
+  .search { padding: 0 16px; }
+  .search input {
+    width: 100%; min-height: 48px; border-radius: 14px;
+    border: 2px solid var(--line); background: var(--tile);
+    padding: 0 14px; font: inherit; font-size: 1rem; color: var(--ink);
+  }
+  .search input:focus { border-color: var(--accent-ui); outline: none; }
+
+  .count { margin: 12px 16px 4px; color: var(--muted); font-size: 0.9rem; }
+
+  .grid {
+    display: grid; gap: 10px; padding: 8px 16px 16px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  @media (min-width: 480px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (min-width: 680px) { .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  @media (min-width: 900px) { .grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+
+  .mon {
+    background: var(--tile); border: 2px solid transparent; border-radius: 16px;
+    padding: 8px 4px 10px; cursor: pointer; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    min-height: 48px;
+  }
+  .mon img { width: 100%; max-width: 150px; height: auto; aspect-ratio: 1; }
+  .mon .num { font-size: 0.85rem; color: var(--muted); }
+  .mon .name { font-size: 1rem; font-weight: 600; line-height: 1.15; overflow-wrap: anywhere; }
+  .mon[aria-pressed="true"] { border-color: var(--accent-ui); }
+  .mon.playing img { animation: pulse .5s ease-in-out 2; }
+  @keyframes pulse { 50% { transform: scale(1.14); } }
+  @media (prefers-reduced-motion: reduce) { .mon.playing img { animation: none; } }
+
+  .empty { padding: 32px 24px; text-align: center; color: var(--muted); }
+
+  .player {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+    background: var(--bar); color: #fff;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    display: grid; grid-template-columns: 56px 1fr auto; gap: 12px; align-items: center;
+    border-top: 4px solid var(--accent-ui);
+  }
+  .player img { width: 56px; height: 56px; background: #fff1; border-radius: 12px; }
+  .player .who { min-width: 0; }
+  .player .who b { display: block; font-size: 1.05rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .player .who small { color: #c3cad6; font-size: 0.82rem; display: block; min-height: 1.2em; }
+  .replay {
+    width: 56px; height: 56px; border-radius: 50%; border: 0; cursor: pointer;
+    background: var(--accent); color: #fff; font-size: 1.4rem;
+  }
+  .replay:disabled { opacity: .4; cursor: default; }
+  .mode { grid-column: 1 / -1; display: flex; gap: 6px; }
+  .mode button {
+    flex: 1; min-height: 44px; border-radius: 12px; border: 2px solid #ffffff33;
+    background: transparent; color: #fff; cursor: pointer; font-size: 0.9rem;
+  }
+  .mode button[aria-pressed="true"] { background: #fff; color: var(--bar); border-color: #fff; }
+
+  /* ---------- Fiche détaillée ---------- */
+  .sheet {
+    position: fixed; inset: 0; z-index: 8; background: var(--paper);
+    display: flex; flex-direction: column;
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .sheet[hidden] { display: none; }
+  .sheet-top {
+    display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+    border-bottom: 1px solid var(--line); background: var(--paper);
+  }
+  .sheet-top .ttl { flex: 1; min-width: 0; font-weight: 800; font-size: 1.1rem; text-align: center;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sheet-top .ttl span:first-child { color: var(--muted); font-weight: 600; margin-right: 6px; }
+  .icon-btn {
+    flex: none; width: 48px; height: 48px; border-radius: 14px; cursor: pointer;
+    border: 2px solid var(--line); background: var(--tile); font-size: 1.4rem; line-height: 1;
+  }
+  .icon-btn:disabled { opacity: .35; cursor: default; }
+  .sheet-body {
+    flex: 1; overflow-y: auto; overscroll-behavior: contain;
+    padding: 16px 16px calc(180px + env(safe-area-inset-bottom, 0px));
+    max-width: 720px; width: 100%; margin: 0 auto;
+  }
+  .hero { display: flex; justify-content: center; }
+  .hero img {
+    width: 220px; height: 220px; object-fit: contain; border-radius: 50%;
+    background: var(--hero-bg);
+  }
+  .genus { text-align: center; margin: 12px 0 8px; color: var(--muted); font-size: 1rem; min-height: 1.2em; }
+  .types { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; min-height: 34px; }
+  .type { padding: 6px 16px; border-radius: 999px; font-weight: 800; font-size: 0.95rem; }
+  .sheet h2 { font-size: 1.2rem; font-weight: 800; margin: 26px 0 10px; letter-spacing: -0.01em; }
+  .desc { margin: 0; font-size: 1.05rem; line-height: 1.5; max-width: 60ch; }
+  .src { margin: 6px 0 0; color: var(--muted); font-size: 0.85rem; }
+  .muted { color: var(--muted); margin: 0; }
+  .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 22px 0 0; }
+  .fact { background: var(--tile); border-radius: 14px; padding: 10px 14px; }
+  .fact.wide { grid-column: 1 / -1; }
+  .fact dt { color: var(--muted); font-size: 0.85rem; }
+  .fact dd { margin: 2px 0 0; font-weight: 600; font-size: 1.05rem; }
+  .bar { height: 8px; border-radius: 4px; background: var(--line); margin-top: 8px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--accent-ui); }
+
+  .evo-node { display: flex; flex-direction: column; gap: 8px; }
+  .evo-children { margin-left: 26px; padding-left: 14px; border-left: 3px solid var(--line);
+    display: flex; flex-direction: column; gap: 12px; }
+  .evo-cond { font-size: 0.9rem; color: var(--muted); margin: 2px 0 6px; }
+  .evo-mon {
+    display: flex; align-items: center; gap: 10px; text-align: left; cursor: pointer;
+    background: var(--tile); border: 2px solid transparent; border-radius: 14px;
+    padding: 4px 16px 4px 4px; min-height: 56px; width: fit-content; max-width: 100%;
+  }
+  .evo-mon img { width: 56px; height: 56px; }
+  .evo-mon span { font-weight: 600; }
+  .evo-mon.current { border-color: var(--accent-ui); }
+
+  .where-ver { font-weight: 800; margin: 14px 0 6px; }
+  .where-ver:first-child { margin-top: 0; }
+  .where-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .where-list li { background: var(--tile); border-radius: 12px; padding: 8px 12px; }
+  .where-list b { display: block; font-weight: 600; }
+  .where-list span { color: var(--muted); font-size: 0.88rem; }
+  .where-more { color: var(--muted); font-size: 0.9rem; margin: 6px 2px 0; }
+
+  /* ---------- Légendaires et fabuleux : cadre violet pastel → turquoise ---------- */
+  :root { --rare: linear-gradient(135deg, #bfa8f2 0%, #8fd8e6 50%, #45d6c8 100%); }
+  .mon.rare, .evo-mon.rare, .grow.rare {
+    border: 3px solid transparent;
+    background: linear-gradient(var(--tile), var(--tile)) padding-box, var(--rare) border-box;
+  }
+  .mon.rare[aria-pressed="true"], .evo-mon.rare.current {
+    border-color: transparent; box-shadow: 0 0 0 3px var(--accent-ui);
+  }
+  .hero img.rare {
+    border: 6px solid transparent;
+    background:
+      linear-gradient(var(--hero-bg), var(--hero-bg)) padding-box,
+      var(--rare) border-box;
+  }
+  /* ---------- Pokémon possédés ---------- */
+  .own-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 2px 16px 10px; }
+  .own-row span { font-weight: 600; }
+  .reset {
+    min-height: 44px; padding: 0 16px; border-radius: 12px; cursor: pointer;
+    border: 2px solid var(--line); background: var(--tile); font-weight: 600;
+  }
+  .reset:disabled { opacity: .4; cursor: default; }
+  .cell { position: relative; }
+  .cell .mon { width: 100%; height: 100%; }
+  .own {
+    position: absolute; top: -6px; right: -6px; width: 44px; height: 44px;
+    padding: 0; border: 0; background: none; cursor: pointer;
+  }
+  .own::before {
+    content: ""; position: absolute; top: 9px; right: 9px; width: 24px; height: 24px;
+    border-radius: 50%; border: 2px solid var(--muted); background: var(--tile);
+  }
+  .own[aria-checked="true"]::before { background: var(--accent); border-color: var(--accent-ui); }
+  .own[aria-checked="true"]::after {
+    content: "✓"; position: absolute; top: 9px; right: 9px; width: 24px; height: 24px;
+    line-height: 24px; text-align: center; color: #fff; font-weight: 800; font-size: 0.9rem;
+  }
+  .own-line {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    min-height: 48px; margin-top: 10px; font-weight: 600; cursor: pointer;
+  }
+  .own-line input { width: 24px; height: 24px; accent-color: var(--accent); }
+  .rare-badge { text-align: center; margin: 6px 0 10px; }
+  .rare-badge[hidden] { display: none; }
+  .rare-badge span {
+    display: inline-block; padding: 5px 16px; border-radius: 999px;
+    background: var(--rare); color: #1a2230; font-weight: 800; font-size: 0.95rem;
+  }
+  /* ---------- Onglets ---------- */
+  :root { --tabs-h: 60px; }
+  .tabs {
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 7;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    height: var(--tabs-h); padding: 8px 16px; background: var(--paper);
+  }
+  .tabs button {
+    min-height: 44px; border-radius: 12px; cursor: pointer;
+    border: 2px solid var(--line); background: var(--tile); font-weight: 800; font-size: 1rem;
+  }
+  .tabs button[aria-selected="true"] { background: var(--accent); border-color: var(--accent-ui); color: #fff; }
+
+  /* ---------- Onglet « Mes jeux » ---------- */
+  .gtop { padding-top: 2px; }
+  .gprog {
+    display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; align-items: center;
+    margin: 2px 16px 12px;
+  }
+  .gprog .gcount { font-weight: 800; font-size: 1.05rem; }
+  .gprog .bar { grid-column: 1 / -1; }
+  .gcontrols {
+    position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--tabs-h)); z-index: 5;
+    background: var(--paper); padding: 10px 16px 12px; border-bottom: 1px solid var(--line);
+    display: grid; gap: 10px;
+  }
+  .gcontrols .search { padding: 0; }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .seg button {
+    min-height: 52px; border-radius: 12px; cursor: pointer; padding: 4px;
+    border: 2px solid var(--line); background: var(--tile); font-weight: 700; font-size: 0.9rem; line-height: 1.2;
+  }
+  .seg small { display: block; font-size: 0.8rem; font-weight: 600; color: var(--muted); }
+  .seg button[aria-pressed="true"] small { color: rgba(255,255,255,.9); }
+  .seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent-ui); color: #fff; }
+
+  .glist { list-style: none; margin: 0; padding: 10px 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .grow {
+    background: var(--tile); border: 2px solid transparent; border-radius: 16px;
+    display: grid; grid-template-columns: 52px 60px minmax(0, 1fr); align-items: center;
+    padding: 4px 8px 4px 0;
+  }
+  .gchk { position: relative; width: 52px; height: 60px; border: 0; background: none; padding: 0; cursor: pointer; }
+  .gchk::before {
+    content: ""; position: absolute; top: 50%; left: 50%; width: 28px; height: 28px; margin: -14px 0 0 -14px;
+    border-radius: 50%; border: 2px solid var(--muted); background: var(--tile);
+  }
+  .gchk[aria-checked="true"]::before { background: var(--accent); border-color: var(--accent-ui); }
+  .gchk[aria-checked="true"]::after {
+    content: "\2713"; position: absolute; top: 50%; left: 50%; width: 28px; height: 28px; margin: -14px 0 0 -14px;
+    line-height: 28px; text-align: center; color: #fff; font-weight: 800;
+  }
+  .gmon {
+    border: 0; background: none; padding: 0; cursor: pointer; min-height: 60px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .gmon img { width: 52px; height: 52px; }
+  .gmon .gnum { font-size: 0.72rem; color: var(--muted); }
+  .gmain {
+    border: 0; background: none; text-align: left; cursor: pointer; width: 100%; min-height: 60px;
+    padding: 6px 0 6px 6px; display: flex; align-items: center; gap: 8px;
+  }
+  .gtext { flex: 1; min-width: 0; }
+  .gname { display: block; font-weight: 800; font-size: 1.05rem; }
+  .gsum { display: block; color: var(--muted); font-size: 0.88rem; margin-top: 2px; line-height: 1.3; }
+  .chev { flex: none; color: var(--muted); font-size: 1.1rem; transition: transform .15s; }
+  .gmain[aria-expanded="true"] .chev { transform: rotate(180deg); }
+  .grow.plain .chev { display: none; }
+  @media (prefers-reduced-motion: reduce) { .chev { transition: none; } }
+  .gdetail { grid-column: 3; padding: 0 0 8px 6px; }
+  .gdetail[hidden] { display: none; }
+  .gdetail .evo { margin: 0 0 8px; font-weight: 600; font-size: 0.92rem; }
+  .gdetail ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .gdetail li { border-top: 1px solid var(--line); padding-top: 6px; }
+  .gdetail li b { display: block; font-weight: 600; }
+  .gdetail li span { display: block; color: var(--muted); font-size: 0.86rem; line-height: 1.3; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="head-row">
+    <div>
+      <h1>Cris Pokémon</h1>
+      <p class="sub">Choisis une génération, touche un Pokémon, écoute son cri.</p>
+    </div>
+    <button class="icon-btn" id="themeBtn" aria-label="Passer en mode sombre">🌙</button>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="Sections">
+  <button role="tab" id="tabDex" aria-selected="true" aria-controls="viewDex">Pokédex</button>
+  <button role="tab" id="tabGames" aria-selected="false" aria-controls="viewGames">Mes jeux</button>
+</nav>
+
+<div id="viewDex" role="tabpanel" aria-labelledby="tabDex">
+<div class="own-row">
+  <span id="ownTotal"></span>
+  <button class="reset" id="resetOwn">Réinitialiser</button>
+</div>
+
+<div class="controls">
+  <div class="gens" id="gens" role="group" aria-label="Génération"></div>
+  <div class="search">
+    <input id="q" type="search" inputmode="search" autocomplete="off"
+           placeholder="Nom ou numéro" aria-label="Rechercher un Pokémon">
+  </div>
+</div>
+
+<p class="count" id="count" aria-live="polite"></p>
+<div class="grid" id="grid"></div>
+</div>
+
+<section id="viewGames" role="tabpanel" aria-labelledby="tabGames" hidden>
+  <div class="gtop">
+    <div class="gens" id="gPicker" role="group" aria-label="Jeu"></div>
+    <div class="gprog">
+      <span class="gcount" id="gCount"></span>
+      <button class="reset" id="gReset">Réinitialiser</button>
+      <div class="bar"><i id="gBar" style="width:0%"></i></div>
+    </div>
+  </div>
+  <div class="gcontrols">
+    <div class="search">
+      <input id="gQ" type="search" inputmode="search" autocomplete="off"
+             placeholder="Nom, numéro ou lieu" aria-label="Rechercher dans ce jeu">
+    </div>
+    <div class="seg" role="group" aria-label="Filtrer la liste">
+      <button id="fAll" data-f="all" aria-pressed="true">Tous</button>
+      <button id="fMiss" data-f="missing" aria-pressed="false">Manquants</button>
+      <button id="fOwn" data-f="owned" aria-pressed="false">Possédés</button>
+    </div>
+  </div>
+  <ul class="glist" id="gList"></ul>
+</section>
+
+<section class="sheet" id="sheet" hidden aria-label="Fiche du Pokémon">
+  <div class="sheet-top">
+    <button class="icon-btn" id="sClose" aria-label="Retour à la liste">←</button>
+    <div class="ttl"><span id="sNum"></span><span id="sName"></span></div>
+    <button class="icon-btn" id="sPrev" aria-label="Pokémon précédent">‹</button>
+    <button class="icon-btn" id="sNext" aria-label="Pokémon suivant">›</button>
+  </div>
+  <div class="sheet-body" id="sBody">
+    <div class="hero"><img id="sArt" alt=""></div>
+    <p class="genus" id="sGenus"></p>
+    <div class="rare-badge" id="sRare" hidden></div>
+    <div class="types" id="sTypes"></div>
+    <label class="own-line"><input type="checkbox" id="sOwn"> Je possède ce Pokémon</label>
+    <dl class="facts" id="sFacts"></dl>
+    <h2>Description du Pokédex</h2>
+    <p class="desc" id="sDesc"></p>
+    <p class="src" id="sDescSrc"></p>
+    <h2>Évolutions</h2>
+    <div id="sEvo"></div>
+    <h2>Où le trouver</h2>
+    <div id="sWhere"></div>
+  </div>
+</section>
+
+<div class="player" id="player">
+  <img id="pImg" alt="" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==">
+  <div class="who">
+    <b id="pName">Touche un Pokémon</b>
+    <small id="pInfo">Le cri se lance tout de suite.</small>
+  </div>
+  <button class="replay" id="replay" aria-label="Rejouer le cri" disabled>▶</button>
+  <div class="mode" role="group" aria-label="Version du cri">
+    <button id="mOrigin" aria-pressed="true">Cri d’origine</button>
+    <button id="mLatest" aria-pressed="false">Cri récent</button>
+  </div>
+</div>
+
+<script>
+/* Données des jeux (lieux, méthodes, niveaux) : issues de PokéAPI, intégrées à la page. */
+const GAME_DATA = {"leafgreen":{"version":"leafgreen","areas":["Bourg Palette","Route 2 (sud, vers Jadielle)","Route 24","Route 25","Forêt de Jade","Forbuissons","Route 12","Route 1","Route 3","Route 5","Route 6","Route 7","Route 8","Route 13","Route 14","Route 15","Bois Baies","Pont du Lien","Pré Ile 5","Route 4","Route 9","Route 16","Route 17","Route 18","Route 22","Manoir Pokémon (RdC)","Manoir Pokémon (1er ét.)","Manoir Pokémon (2e ét.)","Manoir Pokémon (sous-sol)","Route 10","Route 11","Route 23","Mont Braise","Route Tison","Plage Trésor","Cap Falaise","Agualcanal","Vallée Ruine","Entrée du Canyon","Canyon Sesor","Centrale","Événement : disque bonus Pokémon Colosseum (Japon)","Route Victoire 2 (RdC)","Route Victoire 2 (1er ét.)","Route Victoire 2 (2e ét.)","Parc Safari (centre)","Parc Safari (Zone 1, est)","Parc Safari (Zone 2, nord)","Parc Safari (Zone 3, ouest)","Souterrain de Kanto","Mont Sélénite (RdC)","Mont Sélénite (2e s-sol)","Casino de Céladopole","Iles Ecume (RdC)","Iles Ecume (1er s-sol)","Iles Ecume (2e s-sol)","Iles Ecume (3e s-sol)","Grotte (RdC)","Grotte (1er s-sol)","Grotte de Glace (entrée)","Grotte de Glace (RdC)","Grotte de Glace (sous-sol)","Grotte de Glace (cascade)","Grotte Perdue (salle 1)","Grotte Perdue (salle 2)","Grotte Perdue (salle 3)","Grotte Perdue (salle 4)","Grotte Perdue (salle 5)","Grotte Perdue (salle 6)","Grotte Perdue (salle 7)","Grotte Perdue (salle 8)","Grotte Perdue (salle 9)","Grotte Perdue (salle 10)","Grotte Perdue (salle des objets)","Grotte Métamo (A)","Iles Ecume (4e s-sol)","Caverne Azurée (RdC)","Caverne Azurée (étage)","Caverne Azurée (sous-sol)","Mont Sélénite (1er s-sol)","Cave Taupiqueur","Jadielle","Parmanie","Ile 4","Mont Braise (caverne)","Mont Braise (intérieur)","Mont Braise (RdC, caverne derrière Team Rocket)","Route 19","Route 20","Cramois'Ile","Azuria","Carmin sur Mer","Route 21","L'Océane","Camp de Vacances","Labyrinthe d'O","Mémorial","Ile du Lointain","Chemin Vert","Tour Dresseurs","Ruines Tanoby","Ile 1","Ile 5","Mont Braise (1er s-sol)","Mont Braise (2e s-sol)","Mont Braise (sommet)","Céladopole","Laboratoire (Cramois'Île)","Tour Pokémon (2e ét.)","Tour Pokémon (3e ét.)","Tour Pokémon (4e ét.)","Tour Pokémon (5e ét.)","Tour Pokémon (6e ét.)","Dojo de Combat","Route 2 (nord, vers Argenta)","Centre Pokémon (Route 4)","Centre Pokémon (Route 3)","Sylphe SARL (6e ét.)","Toit du manoir Céladon","Grotte Métamo (B)","Grotte Métamo (F)","Chambre Anemune","Chambre Deulipe","Chambre Prois","Chambre Jonquatre","Chambre Hibicinq","Chambre Irix","Chambre Poinsept","Grotte Métamo (C)","Port Ile 3","Grotte Métamo (G)","Grotte Métamo (E)","Mont Braise (3e s-sol)","Grotte Métamo (D)","Grotte Métamo (H)","Grotte Métamo (I)","Sillonnant Kanto","Roc Nombri","Île Aurore"],"notes":["en échange de Nidoran♀","en échange de Nidorina","750 jetons au Casino","120 jetons au Casino","en échange de Piafabec","en échange de Ponyta","en échange de Raichu","en échange de Flagadoss","en échange de Mimitoss","en échange de Abra","en échange de Têtarte","2 500 jetons au Casino","6 500 jetons au Casino","contre : Nautile","contre : Fossile Dôme","contre : Vieil Ambre","4 600 jetons au Casino","si ton premier Pokémon est très amical","après avoir battu la Ligue une seconde fois, si ton starter est Carapuce","après avoir battu la Ligue une seconde fois, si ton starter est Bulbizarre","après avoir battu la Ligue une seconde fois, si ton starter est Salamèche"],"dex":[[1,"Bulbizarre",null,[[0,"gift",5,5,0,-1]],null],[2,"Herbizarre","Évolution de Bulbizarre",[],null],[3,"Florizarre","Évolution de Herbizarre",[],null],[4,"Salamèche",null,[[0,"gift",5,5,0,-1]],null],[5,"Reptincel","Évolution de Salamèche",[],null],[6,"Dracaufeu","Évolution de Reptincel",[],null],[7,"Carapuce",null,[[0,"gift",5,5,0,-1]],null],[8,"Carabaffe","Évolution de Carapuce",[],null],[9,"Tortank","Évolution de Carabaffe",[],null],[10,"Chenipan",null,[[1,"walk",4,5,5,-1],[2,"walk",7,7,20,-1],[3,"walk",8,8,20,-1],[4,"walk",3,5,40,-1],[5,"walk",6,6,10,-1]],null],[11,"Chrysacier","Évolution de Chenipan",[[2,"walk",8,8,4,-1],[3,"walk",9,9,4,-1],[4,"walk",4,6,10,-1],[5,"walk",9,9,5,-1]],null],[12,"Papilusion","Évolution de Chrysacier",[],null],[13,"Aspicot",null,[[1,"walk",4,5,5,-1],[2,"walk",7,7,20,-1],[3,"walk",8,8,20,-1],[4,"walk",3,5,40,-1],[5,"walk",6,6,10,-1]],null],[14,"Coconfort","Évolution d'Aspicot",[[2,"walk",8,8,1,-1],[3,"walk",9,9,1,-1],[4,"walk",5,5,5,-1],[5,"walk",9,9,20,-1]],null],[15,"Dardargnan","Évolution de Coconfort",[],null],[16,"Roucool",null,[[6,"walk",23,27,30,-1],[7,"walk",2,5,50,-1],[1,"walk",2,5,45,-1],[8,"walk",6,7,30,-1],[9,"walk",13,16,40,-1],[10,"walk",13,16,40,-1],[11,"walk",19,22,30,-1],[12,"walk",18,20,30,-1],[13,"walk",25,27,20,-1],[14,"walk",27,27,10,-1],[15,"walk",25,27,20,-1],[2,"walk",11,13,15,-1],[3,"walk",11,13,15,-1],[16,"walk",32,32,10,-1],[17,"walk",29,32,30,-1],[18,"walk",44,44,20,-1]],null],[17,"Roucoups","Évolution de Roucool",[[13,"walk",29,29,5,-1],[14,"walk",29,29,5,-1],[15,"walk",29,29,5,-1],[16,"walk",37,37,20,-1],[17,"walk",34,40,15,-1],[18,"walk",48,50,15,-1]],null],[18,"Roucarnage","Évolution de Roucoups",[],null],[19,"Rattata",null,[[7,"walk",2,4,50,-1],[1,"walk",2,5,45,-1],[19,"walk",8,12,35,-1],[20,"walk",14,17,40,-1],[21,"walk",18,22,30,-1],[22,"walk",22,22,5,-1],[23,"walk",22,22,5,-1],[24,"walk",2,5,45,-1],[25,"walk",26,28,15,-1],[26,"walk",26,28,15,-1],[27,"walk",26,28,15,-1],[28,"walk",26,26,5,-1]],null],[20,"Rattatac","Évolution de Rattata",[[21,"walk",23,25,5,-1],[22,"walk",25,29,25,-1],[23,"walk",25,29,15,-1],[25,"walk",32,36,30,-1],[26,"walk",32,36,30,-1],[27,"walk",32,36,30,-1],[28,"walk",34,38,30,-1]],null],[21,"Piafabec",null,[[8,"walk",6,8,35,-1],[19,"walk",8,12,35,-1],[20,"walk",13,17,35,-1],[29,"walk",13,17,35,-1],[30,"walk",13,17,35,-1],[21,"walk",20,22,30,-1],[22,"walk",20,22,30,-1],[23,"walk",20,22,30,-1],[24,"walk",3,5,10,-1],[31,"walk",32,34,15,-1],[32,"walk",32,32,10,-1],[33,"walk",30,32,25,-1],[34,"walk",31,32,30,-1],[35,"walk",31,31,20,-1],[36,"walk",44,44,20,-1],[37,"walk",44,44,20,-1],[38,"walk",44,44,20,-1]],null],[22,"Rapasdepic","Évolution de Piafabec",[[22,"walk",25,27,5,-1],[23,"walk",25,29,15,-1],[31,"walk",40,44,25,-1],[32,"walk",38,40,25,-1],[33,"walk",36,36,10,-1],[34,"walk",36,40,20,-1],[35,"walk",36,36,10,-1],[36,"walk",48,50,15,-1],[37,"walk",49,49,10,-1],[38,"walk",48,50,15,-1],[39,"walk",50,50,15,-1]],null],[23,"Abo",null,[],"Rouge Feu"],[24,"Arbok","Évolution d'Abo",[],"Rouge Feu"],[25,"Pikachu",null,[[4,"walk",3,5,5,-1],[40,"walk",22,26,25,-1],[41,"colosseum-bonus-disc-jpn",10,10,0,-1]],null],[26,"Raichu","Évolution de Pikachu",[],null],[27,"Sabelette",null,[[19,"walk",6,12,25,-1],[12,"walk",17,19,20,-1],[20,"walk",11,17,25,-1],[29,"walk",11,17,25,-1],[30,"walk",12,15,40,-1],[31,"walk",32,34,20,-1]],null],[28,"Sablaireau","Évolution de Sabelette",[[31,"walk",44,44,5,-1],[42,"walk",44,44,5,-1],[43,"walk",46,46,5,-1],[44,"walk",44,44,5,-1]],null],[29,"Nidoran♀",null,[[8,"walk",6,7,14,-1],[45,"walk",22,22,20,-1],[46,"walk",24,24,20,-1],[47,"walk",30,30,20,-1],[48,"walk",22,22,20,-1]],null],[30,"Nidorina","Évolution de Nidoran♀",[[45,"walk",31,31,10,-1],[46,"walk",33,33,10,-1],[47,"walk",30,30,10,-1],[48,"walk",30,30,10,-1]],null],[31,"Nidoqueen","Évolution de Nidorina",[],null],[32,"Nidoran♂",null,[[8,"walk",6,6,1,-1],[46,"walk",24,24,5,-1],[48,"walk",30,30,5,-1],[49,"npc-trade",0,0,0,0]],null],[33,"Nidorino","Évolution de Nidoran♂",[[30,"npc-trade",0,0,0,1],[45,"walk",31,31,5,-1],[47,"walk",30,30,5,-1]],null],[34,"Nidoking","Évolution de Nidorino",[],null],[35,"Mélofée",null,[[50,"walk",8,8,1,-1],[51,"walk",10,12,6,-1],[52,"gift",12,12,0,2]],null],[36,"Mélodelfe","Évolution de Mélofée",[],null],[37,"Goupix",null,[[11,"walk",18,20,10,-1],[12,"walk",15,18,20,-1],[25,"walk",30,32,15,-1],[26,"walk",30,32,15,-1],[27,"walk",30,32,15,-1],[28,"walk",30,32,15,-1]],null],[38,"Feunard","Évolution de Goupix",[],null],[39,"Rondoudou",null,[[8,"walk",3,7,10,-1]],null],[40,"Grodoudou","Évolution de Rondoudou",[],null],[41,"Nosferapti",null,[[53,"walk",22,26,34,-1],[54,"walk",22,26,34,-1],[55,"walk",22,24,20,-1],[56,"walk",24,24,10,-1],[50,"walk",7,10,69,-1],[57,"walk",15,16,30,-1],[58,"walk",15,16,30,-1],[51,"walk",8,11,49,-1],[42,"walk",32,32,10,-1],[43,"walk",34,34,10,-1],[44,"walk",32,32,10,-1],[59,"walk",40,40,10,-1],[60,"walk",40,40,10,-1],[61,"walk",40,40,10,-1],[62,"walk",40,40,10,-1],[63,"walk",37,37,20,-1],[64,"walk",37,37,20,-1],[65,"walk",37,37,20,-1],[66,"walk",37,37,20,-1],[67,"walk",37,37,20,-1],[68,"walk",37,37,20,-1],[69,"walk",37,37,20,-1],[70,"walk",37,37,20,-1],[71,"walk",37,37,20,-1],[72,"walk",37,37,20,-1],[73,"walk",37,37,20,-1],[74,"walk",6,16,100,-1]],null],[42,"Nosferalto","Évolution de Nosferapti",[[53,"walk",26,30,11,-1],[54,"walk",26,30,11,-1],[55,"walk",26,30,10,-1],[56,"walk",26,30,10,-1],[75,"walk",26,30,15,-1],[76,"walk",46,55,14,-1],[77,"walk",49,58,25,-1],[78,"walk",52,61,11,-1],[42,"walk",44,44,5,-1],[43,"walk",46,46,5,-1],[44,"walk",44,44,5,-1],[59,"walk",45,48,25,-1],[60,"walk",45,48,25,-1],[61,"walk",45,48,25,-1],[62,"walk",45,48,25,-1],[63,"walk",41,43,20,-1],[64,"walk",41,43,20,-1],[65,"walk",41,43,20,-1],[66,"walk",41,43,20,-1],[67,"walk",41,43,20,-1],[68,"walk",41,43,20,-1],[69,"walk",41,43,20,-1],[70,"walk",41,43,20,-1],[71,"walk",41,43,20,-1],[72,"walk",41,43,20,-1],[73,"walk",41,41,10,-1]],null],[43,"Mystherbe",null,[],"Rouge Feu"],[44,"Ortide","Évolution de Mystherbe",[],"Rouge Feu"],[45,"Rafflesia","Évolution d'Ortide",[],null],[46,"Paras",null,[[50,"walk",8,8,5,-1],[79,"walk",5,10,100,-1],[51,"walk",10,12,15,-1],[46,"walk",22,22,15,-1],[47,"walk",23,23,15,-1]],null],[47,"Parasect","Évolution de Paras",[[76,"walk",49,58,25,-1],[77,"walk",52,61,14,-1],[78,"walk",55,64,14,-1],[45,"walk",30,30,5,-1],[46,"walk",25,25,5,-1]],null],[48,"Mimitoss",null,[[6,"walk",24,26,30,-1],[13,"walk",24,26,30,-1],[14,"walk",24,26,30,-1],[15,"walk",24,26,30,-1],[45,"walk",22,22,15,-1],[48,"walk",23,23,15,-1],[16,"walk",34,34,10,-1],[17,"walk",34,34,5,-1]],null],[49,"Aéromite","Évolution de Mimitoss",[[47,"walk",32,32,5,-1],[48,"walk",32,32,5,-1],[16,"walk",37,40,5,-1]],null],[50,"Taupiqueur",null,[[80,"walk",15,22,95,-1]],null],[51,"Triopikeur","Évolution de Taupiqueur",[[80,"walk",29,31,5,-1]],null],[52,"Miaouss",null,[[9,"walk",10,16,35,-1],[10,"walk",10,16,35,-1],[11,"walk",17,20,40,-1],[12,"walk",18,20,30,-1],[33,"walk",31,31,10,-1],[34,"walk",31,31,10,-1],[35,"walk",31,31,10,-1],[17,"walk",31,31,10,-1],[18,"walk",41,41,10,-1],[36,"walk",41,41,10,-1],[37,"walk",43,43,10,-1],[38,"walk",41,41,10,-1],[39,"walk",43,43,10,-1]],null],[53,"Persian","Évolution de Miaouss",[[33,"walk",37,40,5,-1],[34,"walk",37,40,5,-1],[35,"walk",37,40,5,-1],[17,"walk",37,40,5,-1],[18,"walk",47,50,5,-1],[36,"walk",47,50,5,-1],[37,"walk",49,52,5,-1],[38,"walk",47,50,5,-1],[39,"walk",49,52,5,-1]],null],[54,"Psykokwak",null,[],"Rouge Feu"],[55,"Akwakwak","Évolution de Psykokwak",[],"Rouge Feu"],[56,"Férosinge",null,[[57,"walk",16,17,15,-1],[58,"walk",16,17,15,-1],[8,"walk",7,7,10,-1],[19,"walk",10,12,5,-1],[24,"walk",2,5,45,-1],[31,"walk",32,34,30,-1]],null],[57,"Colossinge","Évolution de Férosinge",[[76,"walk",52,61,11,-1],[31,"walk",42,42,5,-1],[43,"walk",42,42,10,-1]],null],[58,"Caninos",null,[],"Rouge Feu"],[59,"Arcanin","Évolution de Caninos",[],null],[60,"Ptitard",null,[[81,"good-rod",5,15,60,-1],[81,"super-rod",15,25,40,-1],[82,"good-rod",5,15,20,-1],[10,"good-rod",5,15,60,-1],[10,"super-rod",15,25,40,-1],[24,"good-rod",5,15,60,-1],[24,"super-rod",15,25,40,-1],[3,"good-rod",5,15,60,-1],[3,"super-rod",15,25,40,-1],[76,"good-rod",5,15,60,-1],[76,"super-rod",15,25,40,-1],[78,"good-rod",5,15,60,-1],[78,"super-rod",15,25,40,-1],[31,"good-rod",5,15,60,-1],[31,"super-rod",15,25,40,-1],[45,"good-rod",5,15,20,-1],[46,"good-rod",5,15,20,-1],[47,"good-rod",5,15,20,-1],[48,"good-rod",5,15,20,-1],[16,"good-rod",5,15,20,-1],[59,"good-rod",5,15,60,-1],[59,"super-rod",15,25,40,-1],[35,"good-rod",5,15,60,-1],[35,"super-rod",15,25,40,-1],[37,"good-rod",5,15,60,-1],[37,"super-rod",15,25,40,-1],[83,"good-rod",5,15,60,-1],[83,"super-rod",15,25,40,-1]],null],[61,"Têtarte","Évolution de Ptitard",[[81,"super-rod",20,30,40,-1],[10,"super-rod",20,30,40,-1],[24,"super-rod",20,30,40,-1],[3,"super-rod",20,30,40,-1],[76,"super-rod",20,30,40,-1],[78,"super-rod",20,30,40,-1],[31,"super-rod",20,30,40,-1],[59,"super-rod",20,30,40,-1],[35,"super-rod",20,30,40,-1],[37,"super-rod",20,30,40,-1],[83,"super-rod",20,30,40,-1]],null],[62,"Tartard","Évolution de Têtarte",[],null],[63,"Abra",null,[[2,"walk",8,12,15,-1],[3,"walk",9,13,15,-1],[52,"gift",7,7,0,3]],null],[64,"Kadabra","Évolution d'Abra",[[77,"walk",55,64,11,-1],[78,"walk",58,67,25,-1]],null],[65,"Alakazam","Évolution de Kadabra",[],null],[66,"Machoc",null,[[57,"walk",16,17,15,-1],[58,"walk",17,17,10,-1],[42,"walk",32,32,20,-1],[43,"walk",34,34,20,-1],[44,"walk",32,32,20,-1],[32,"walk",35,35,10,-1],[84,"walk",31,39,50,-1],[85,"walk",32,36,40,-1],[86,"walk",34,38,40,-1]],null],[67,"Machopeur","Évolution de Machoc",[[76,"walk",46,46,10,-1],[77,"walk",49,49,20,-1],[78,"walk",52,52,10,-1],[42,"walk",44,46,5,-1],[43,"walk",46,48,5,-1],[44,"walk",44,46,5,-1],[85,"walk",38,40,20,-1],[86,"walk",40,42,10,-1]],null],[68,"Mackogneur","Évolution de Machopeur",[],null],[69,"Chétiflor",null,[[6,"walk",22,26,35,-1],[9,"walk",13,16,25,-1],[10,"walk",13,16,25,-1],[11,"walk",19,22,20,-1],[13,"walk",22,26,35,-1],[14,"walk",22,26,35,-1],[15,"walk",22,26,35,-1],[2,"walk",12,14,25,-1],[3,"walk",12,14,25,-1],[16,"walk",30,30,10,-1],[35,"walk",30,32,30,-1],[17,"walk",31,31,20,-1],[36,"walk",44,44,10,-1]],null],[70,"Boustiflor","Évolution de Chétiflor",[[6,"walk",28,30,5,-1],[13,"walk",28,30,5,-1],[14,"walk",30,30,5,-1],[15,"walk",28,30,5,-1],[16,"walk",35,35,20,-1],[35,"walk",36,38,15,-1],[17,"walk",36,36,10,-1],[36,"walk",48,48,5,-1]],null],[71,"Empiflor","Évolution de Boustiflor",[],null],[72,"Tentacool",null,[[6,"surf",5,40,100,-1],[87,"surf",5,40,100,-1],[88,"surf",5,40,100,-1],[89,"surf",5,40,100,-1],[90,"surf",5,40,100,-1],[91,"surf",5,40,100,-1],[0,"surf",5,40,100,-1],[19,"surf",5,40,100,-1],[29,"surf",5,40,100,-1],[30,"surf",5,40,100,-1],[13,"surf",5,40,100,-1],[92,"surf",5,40,100,-1],[2,"surf",5,40,100,-1],[93,"surf",5,40,100,-1],[62,"surf",5,45,95,-1],[33,"surf",5,40,95,-1],[34,"surf",5,40,95,-1],[17,"surf",5,40,95,-1],[94,"surf",5,40,65,-1],[95,"surf",5,40,65,-1],[18,"surf",5,40,65,-1],[96,"surf",5,40,65,-1],[97,"surf",5,40,95,-1],[98,"surf",5,40,95,-1],[36,"surf",5,40,95,-1],[99,"surf",5,35,90,-1],[100,"surf",5,35,90,-1],[101,"surf",5,40,95,-1],[102,"surf",5,40,65,-1]],null],[73,"Tentacruel","Évolution de Tentacool",[[62,"surf",35,45,4,-1],[33,"surf",35,40,5,-1],[34,"surf",35,40,5,-1],[17,"surf",35,40,5,-1],[94,"surf",35,40,5,-1],[95,"surf",35,40,5,-1],[18,"surf",35,40,5,-1],[96,"surf",35,40,5,-1],[97,"surf",35,40,5,-1],[98,"surf",35,40,5,-1],[36,"surf",35,40,5,-1],[99,"surf",35,40,5,-1],[100,"surf",35,40,5,-1],[101,"surf",35,40,5,-1],[102,"surf",35,40,5,-1]],null],[74,"Racaillou",null,[[50,"walk",7,9,25,-1],[57,"walk",15,17,35,-1],[58,"rock-smash",5,30,95,-1],[58,"walk",15,17,35,-1],[76,"rock-smash",30,50,65,-1],[77,"rock-smash",35,55,65,-1],[78,"rock-smash",40,60,65,-1],[51,"walk",9,10,30,-1],[42,"walk",32,32,20,-1],[43,"walk",34,34,20,-1],[44,"walk",32,32,20,-1],[32,"rock-smash",5,30,95,-1],[32,"walk",33,33,10,-1],[84,"walk",29,37,50,-1],[85,"rock-smash",5,30,95,-1],[85,"walk",30,34,40,-1],[86,"rock-smash",25,40,65,-1],[86,"walk",32,40,50,-1],[103,"rock-smash",25,40,65,-1],[103,"walk",34,42,70,-1],[104,"rock-smash",25,40,65,-1],[104,"walk",40,44,40,-1],[33,"rock-smash",5,30,95,-1],[33,"walk",31,31,10,-1],[39,"rock-smash",25,40,65,-1],[39,"walk",46,46,20,-1],[105,"rock-smash",5,30,95,-1]],null],[75,"Gravalanch","Évolution de Racaillou",[[58,"rock-smash",25,40,5,-1],[76,"rock-smash",40,55,35,-1],[77,"rock-smash",45,60,35,-1],[78,"rock-smash",50,65,35,-1],[32,"rock-smash",25,40,5,-1],[85,"rock-smash",25,40,5,-1],[86,"rock-smash",30,50,35,-1],[103,"rock-smash",30,50,35,-1],[104,"rock-smash",30,50,35,-1],[33,"rock-smash",25,40,5,-1],[39,"rock-smash",30,50,35,-1],[105,"rock-smash",25,40,5,-1]],null],[76,"Grolem","Évolution de Gravalanch",[],null],[77,"Ponyta",null,[[32,"walk",30,36,35,-1],[33,"walk",31,34,30,-1]],null],[78,"Galopa","Évolution de Ponyta",[[32,"walk",39,42,5,-1],[33,"walk",37,40,5,-1]],null],[79,"Ramoloss",null,[[53,"walk",26,33,55,-1],[54,"walk",29,31,40,-1],[55,"walk",30,32,40,-1],[56,"super-rod",15,25,4,-1],[56,"surf",30,40,4,-1],[56,"walk",30,32,20,-1],[75,"super-rod",15,25,4,-1],[75,"surf",30,40,4,-1],[75,"walk",32,32,10,-1],[6,"super-rod",25,35,1,-1],[87,"super-rod",25,35,1,-1],[88,"super-rod",25,35,1,-1],[89,"super-rod",25,35,1,-1],[81,"super-rod",15,35,5,-1],[81,"surf",20,40,100,-1],[90,"super-rod",25,35,1,-1],[91,"super-rod",25,35,1,-1],[106,"surf",5,40,99,-1],[82,"super-rod",15,35,5,-1],[82,"surf",20,40,100,-1],[0,"super-rod",25,35,1,-1],[19,"super-rod",25,35,1,-1],[10,"super-rod",15,35,5,-1],[10,"surf",20,40,100,-1],[29,"super-rod",25,35,1,-1],[30,"super-rod",25,35,1,-1],[13,"super-rod",25,35,1,-1],[92,"super-rod",25,35,1,-1],[24,"super-rod",15,35,5,-1],[24,"surf",20,40,100,-1],[2,"super-rod",25,35,1,-1],[3,"super-rod",15,35,5,-1],[3,"surf",20,40,100,-1],[76,"super-rod",15,35,5,-1],[76,"surf",30,50,65,-1],[78,"super-rod",15,25,4,-1],[78,"surf",40,60,65,-1],[31,"super-rod",15,35,5,-1],[31,"surf",20,40,100,-1],[45,"super-rod",15,35,4,-1],[45,"surf",20,40,100,-1],[46,"super-rod",15,35,4,-1],[46,"surf",20,40,100,-1],[47,"super-rod",15,35,4,-1],[47,"surf",20,40,100,-1],[48,"super-rod",15,35,4,-1],[48,"surf",20,40,100,-1],[93,"super-rod",25,35,1,-1],[16,"super-rod",15,35,5,-1],[16,"surf",5,40,95,-1],[16,"walk",31,31,5,-1],[59,"super-rod",15,35,5,-1],[59,"surf",5,35,30,-1],[59,"walk",41,41,5,-1],[62,"super-rod",25,35,1,-1],[62,"walk",41,41,5,-1],[33,"super-rod",25,35,1,-1],[33,"walk",34,34,5,-1],[34,"super-rod",25,35,1,-1],[34,"walk",31,31,5,-1],[35,"super-rod",15,35,5,-1],[35,"surf",5,40,95,-1],[35,"walk",31,31,5,-1],[17,"super-rod",25,35,1,-1],[17,"walk",31,31,5,-1],[94,"super-rod",25,35,1,-1],[95,"super-rod",25,35,1,-1],[18,"super-rod",25,35,1,-1],[18,"walk",41,41,5,-1],[96,"super-rod",25,35,1,-1],[97,"super-rod",25,35,1,-1],[98,"super-rod",25,35,1,-1],[36,"super-rod",25,35,1,-1],[36,"walk",41,41,5,-1],[37,"super-rod",15,35,5,-1],[37,"walk",41,41,5,-1],[99,"super-rod",25,35,1,-1],[38,"walk",41,41,5,-1],[100,"super-rod",25,35,1,-1],[101,"super-rod",25,35,1,-1],[83,"super-rod",15,35,5,-1],[83,"surf",5,35,30,-1],[102,"super-rod",25,35,1,-1]],null],[80,"Flagadoss","Évolution de Ramoloss",[[54,"walk",33,35,5,-1],[55,"walk",32,34,10,-1],[56,"surf",35,40,1,-1],[56,"walk",32,34,15,-1],[75,"surf",35,40,1,-1],[75,"walk",32,34,15,-1],[89,"super-rod",25,35,4,-1],[76,"surf",40,55,35,-1],[78,"surf",50,65,35,-1],[16,"surf",35,40,5,-1],[35,"surf",35,40,5,-1],[35,"walk",37,40,5,-1]],null],[81,"Magnéti",null,[[40,"walk",22,25,30,-1]],null],[82,"Magnéton","Évolution de Magnéti",[[76,"walk",49,49,20,-1],[77,"walk",52,52,10,-1],[78,"walk",55,55,10,-1],[40,"walk",31,34,15,-1]],null],[83,"Canarticho",null,[[91,"npc-trade",0,0,0,4]],null],[84,"Doduo",null,[[21,"walk",18,22,35,-1],[22,"walk",24,28,35,-1],[23,"walk",24,28,35,-1],[46,"walk",26,26,20,-1],[48,"walk",26,26,20,-1]],null],[85,"Dodrio","Évolution de Doduo",[],null],[86,"Otaria",null,[[54,"walk",28,28,10,-1],[55,"walk",30,32,20,-1],[56,"surf",25,35,60,-1],[56,"walk",30,32,40,-1],[75,"surf",25,35,60,-1],[75,"walk",30,34,50,-1],[59,"surf",5,35,60,-1],[59,"walk",43,47,40,-1],[60,"walk",45,45,10,-1],[61,"walk",45,45,10,-1],[62,"walk",43,47,40,-1],[107,"npc-trade",0,0,0,5]],null],[87,"Lamantine","Évolution d'Otaria",[[56,"surf",35,40,5,-1],[56,"walk",32,34,5,-1],[75,"surf",35,40,5,-1],[75,"walk",34,36,10,-1],[59,"surf",35,40,5,-1],[59,"walk",49,53,20,-1],[62,"walk",49,53,20,-1]],null],[88,"Tadmorv",null,[[106,"super-rod",30,40,1,-1],[25,"walk",28,30,30,-1],[26,"walk",28,30,30,-1],[27,"walk",28,30,30,-1],[28,"walk",28,30,30,-1]],null],[89,"Grotadmorv","Évolution de Tadmorv",[[25,"walk",32,32,5,-1],[26,"walk",32,32,5,-1],[27,"walk",32,32,5,-1],[28,"walk",34,34,5,-1]],null],[90,"Kokiyas",null,[],"Rouge Feu"],[91,"Crustabri","Évolution de Kokiyas",[],null],[92,"Fantominus",null,[[108,"walk",13,19,90,-1],[109,"walk",13,19,86,-1],[110,"walk",13,19,86,-1],[111,"walk",14,19,85,-1],[112,"walk",15,19,75,-1],[63,"walk",38,40,25,-1],[64,"walk",38,40,25,-1],[65,"walk",38,40,25,-1],[66,"walk",38,40,25,-1],[67,"walk",38,40,25,-1],[68,"walk",38,40,25,-1],[69,"walk",38,40,25,-1],[70,"walk",38,40,25,-1],[71,"walk",38,40,25,-1],[72,"walk",38,40,25,-1],[73,"walk",40,40,20,-1]],null],[93,"Spectrum","Évolution de Fantominus",[[108,"walk",20,20,1,-1],[109,"walk",20,20,5,-1],[110,"walk",20,20,5,-1],[111,"walk",21,23,6,-1],[112,"walk",23,25,15,-1],[63,"walk",44,52,30,-1],[64,"walk",44,52,30,-1],[65,"walk",44,52,30,-1],[66,"walk",44,52,30,-1],[67,"walk",44,52,30,-1],[68,"walk",44,52,30,-1],[69,"walk",44,52,30,-1],[70,"walk",44,52,30,-1],[71,"walk",44,52,30,-1],[72,"walk",44,52,30,-1],[73,"walk",44,52,30,-1]],null],[94,"Ectoplasma","Évolution de Spectrum",[],null],[95,"Onix",null,[[57,"walk",13,15,5,-1],[58,"walk",13,17,10,-1],[42,"walk",40,46,30,-1],[43,"walk",45,48,20,-1],[44,"walk",40,46,30,-1],[39,"walk",54,54,5,-1]],null],[96,"Soporifik",null,[[30,"walk",11,15,25,-1],[16,"walk",34,34,10,-1]],null],[97,"Hypnomade","Évolution de Soporifik",[[16,"static",30,30,0,-1],[16,"walk",37,40,5,-1]],null],[98,"Krabby",null,[[56,"good-rod",5,15,60,-1],[56,"super-rod",15,30,80,-1],[56,"surf",25,30,30,-1],[75,"good-rod",5,15,60,-1],[75,"super-rod",15,30,80,-1],[75,"surf",25,30,30,-1],[6,"good-rod",5,15,60,-1],[6,"super-rod",15,35,84,-1],[87,"good-rod",5,15,60,-1],[87,"super-rod",15,25,80,-1],[88,"good-rod",5,15,60,-1],[88,"super-rod",15,25,80,-1],[89,"good-rod",5,15,60,-1],[89,"super-rod",15,25,40,-1],[90,"good-rod",5,15,60,-1],[90,"super-rod",15,35,84,-1],[91,"good-rod",5,15,60,-1],[91,"super-rod",15,25,40,-1],[0,"good-rod",5,15,60,-1],[0,"super-rod",15,25,40,-1],[19,"good-rod",5,15,60,-1],[19,"super-rod",15,35,84,-1],[29,"good-rod",5,15,60,-1],[29,"super-rod",15,35,84,-1],[30,"good-rod",5,15,60,-1],[30,"super-rod",15,35,84,-1],[13,"good-rod",5,15,60,-1],[13,"super-rod",15,35,84,-1],[92,"good-rod",5,15,60,-1],[92,"super-rod",15,25,80,-1],[2,"good-rod",5,15,60,-1],[2,"super-rod",15,35,84,-1],[93,"good-rod",5,15,60,-1],[93,"super-rod",15,35,44,-1],[62,"good-rod",5,15,80,-1],[62,"super-rod",15,25,40,-1],[33,"good-rod",5,15,80,-1],[33,"super-rod",15,25,80,-1],[34,"good-rod",5,15,80,-1],[34,"super-rod",15,25,80,-1],[17,"good-rod",5,15,80,-1],[17,"super-rod",15,25,80,-1],[94,"good-rod",5,15,80,-1],[94,"super-rod",15,25,40,-1],[95,"good-rod",5,15,80,-1],[95,"super-rod",15,25,40,-1],[18,"good-rod",5,15,80,-1],[18,"super-rod",15,25,40,-1],[96,"good-rod",5,15,80,-1],[96,"super-rod",15,25,40,-1],[97,"good-rod",5,15,80,-1],[97,"super-rod",15,25,40,-1],[98,"good-rod",5,15,80,-1],[98,"super-rod",15,25,40,-1],[36,"good-rod",5,15,80,-1],[36,"super-rod",15,25,40,-1],[99,"good-rod",5,15,80,-1],[99,"super-rod",15,25,40,-1],[100,"good-rod",5,15,80,-1],[100,"super-rod",15,25,40,-1],[101,"good-rod",5,15,80,-1],[101,"super-rod",15,25,40,-1],[102,"good-rod",5,15,80,-1],[102,"super-rod",15,25,40,-1]],null],[99,"Krabboss","Évolution de Krabby",[[87,"super-rod",25,35,4,-1],[88,"super-rod",25,35,4,-1],[0,"super-rod",25,35,4,-1],[92,"super-rod",25,35,4,-1],[62,"super-rod",25,35,4,-1],[33,"super-rod",25,35,4,-1],[34,"super-rod",25,35,4,-1],[17,"super-rod",25,35,4,-1],[94,"super-rod",25,35,4,-1],[95,"super-rod",25,35,4,-1],[18,"super-rod",25,35,4,-1],[96,"super-rod",25,35,4,-1],[97,"super-rod",25,35,4,-1],[98,"super-rod",25,35,4,-1],[36,"super-rod",25,35,4,-1],[99,"super-rod",25,35,4,-1],[100,"super-rod",25,35,4,-1],[101,"super-rod",25,35,4,-1],[102,"super-rod",25,35,4,-1]],null],[100,"Voltorbe",null,[[29,"walk",14,17,40,-1],[40,"walk",22,25,30,-1]],null],[101,"Électrode","Évolution de Voltorbe",[[76,"walk",58,58,5,-1],[77,"walk",61,61,4,-1],[78,"walk",64,64,4,-1],[40,"static",34,34,0,-1],[107,"npc-trade",0,0,0,6]],null],[102,"Noeunoeuf",null,[[45,"walk",24,25,20,-1],[46,"walk",23,25,20,-1],[47,"walk",25,27,20,-1],[48,"walk",25,27,20,-1],[16,"walk",35,35,5,-1]],null],[103,"Noadkoko","Évolution de Noeunoeuf",[],null],[104,"Osselait",null,[[108,"walk",15,17,9,-1],[109,"walk",15,17,9,-1],[110,"walk",15,17,9,-1],[111,"walk",17,19,9,-1],[112,"walk",17,19,10,-1],[39,"walk",46,46,10,-1]],null],[105,"Ossatueur","Évolution d'Osselait",[[42,"walk",44,46,5,-1],[43,"walk",46,48,5,-1],[44,"walk",44,46,5,-1],[39,"walk",52,52,10,-1]],null],[106,"Kicklee",null,[[113,"gift",25,25,0,-1]],null],[107,"Tygnon",null,[[113,"gift",25,25,0,-1]],null],[108,"Excelangue",null,[[23,"npc-trade",0,0,0,7]],null],[109,"Smogo",null,[[106,"surf",30,40,1,-1],[25,"walk",28,28,5,-1],[26,"walk",28,28,5,-1],[27,"walk",28,28,5,-1],[28,"walk",28,28,5,-1]],null],[110,"Smogogo","Évolution de Smogo",[],"Rouge Feu"],[111,"Rhinocorne",null,[[45,"walk",25,25,20,-1],[47,"walk",26,26,20,-1]],null],[112,"Rhinoféros","Évolution de Rhinocorne",[],null],[113,"Leveinard",null,[[45,"walk",23,23,1,-1],[47,"walk",26,26,4,-1]],null],[114,"Saquedeneu",null,[[92,"walk",17,28,100,-1],[34,"walk",33,35,30,-1],[107,"npc-trade",0,0,0,8]],null],[115,"Kangourex",null,[[46,"walk",25,25,4,-1],[48,"walk",28,28,1,-1]],null],[116,"Hypotrempe",null,[[56,"good-rod",5,15,20,-1],[75,"good-rod",5,15,20,-1],[6,"good-rod",5,15,20,-1],[87,"good-rod",5,15,20,-1],[88,"good-rod",5,15,20,-1],[89,"good-rod",5,15,20,-1],[90,"good-rod",5,15,20,-1],[91,"good-rod",5,15,20,-1],[91,"super-rod",25,35,4,-1],[0,"good-rod",5,15,20,-1],[19,"good-rod",5,15,20,-1],[29,"good-rod",5,15,20,-1],[30,"good-rod",5,15,20,-1],[13,"good-rod",5,15,20,-1],[92,"good-rod",5,15,20,-1],[2,"good-rod",5,15,20,-1],[93,"good-rod",5,15,20,-1]],null],[117,"Hypocéan","Évolution de Hypotrempe",[],"Rouge Feu"],[118,"Poissirène",null,[[81,"good-rod",5,15,20,-1],[82,"good-rod",5,15,60,-1],[82,"super-rod",15,25,40,-1],[10,"good-rod",5,15,20,-1],[24,"good-rod",5,15,20,-1],[3,"good-rod",5,15,20,-1],[76,"good-rod",5,15,20,-1],[78,"good-rod",5,15,20,-1],[31,"good-rod",5,15,20,-1],[45,"good-rod",5,15,60,-1],[45,"super-rod",15,25,40,-1],[46,"good-rod",5,15,60,-1],[46,"super-rod",15,25,40,-1],[47,"good-rod",5,15,60,-1],[47,"super-rod",15,25,40,-1],[48,"good-rod",5,15,60,-1],[48,"super-rod",15,25,40,-1],[16,"good-rod",5,15,60,-1],[16,"super-rod",15,25,40,-1],[59,"good-rod",5,15,20,-1],[35,"good-rod",5,15,20,-1],[37,"good-rod",5,15,20,-1],[83,"good-rod",5,15,20,-1]],null],[119,"Poissoroy","Évolution de Poissirène",[[82,"super-rod",20,30,40,-1],[45,"super-rod",20,30,40,-1],[46,"super-rod",20,30,40,-1],[47,"super-rod",20,30,40,-1],[48,"super-rod",20,30,40,-1],[16,"super-rod",20,30,40,-1]],null],[120,"Stari",null,[[89,"super-rod",15,25,40,-1],[91,"super-rod",15,25,40,-1],[0,"super-rod",15,25,40,-1],[93,"super-rod",15,25,40,-1],[62,"super-rod",15,25,40,-1],[101,"super-rod",15,25,40,-1],[102,"super-rod",15,25,40,-1]],null],[121,"Staross","Évolution de Stari",[],null],[122,"M. Mime",null,[[114,"npc-trade",0,0,0,9]],null],[123,"Insécateur",null,[],"Rouge Feu"],[124,"Lippoutou",null,[[90,"npc-trade",0,0,0,10]],null],[125,"Élektek",null,[],"Rouge Feu"],[126,"Magmar",null,[[32,"walk",38,40,5,-1]],null],[127,"Scarabrute",null,[[45,"walk",23,23,4,-1],[46,"walk",28,28,1,-1],[52,"gift",18,18,0,11]],null],[128,"Tauros",null,[[47,"walk",28,28,1,-1],[48,"walk",25,25,4,-1]],null],[129,"Magicarpe",null,[[56,"good-rod",5,15,20,-1],[56,"old-rod",5,5,100,-1],[75,"good-rod",5,15,20,-1],[75,"old-rod",5,5,100,-1],[6,"good-rod",5,15,20,-1],[6,"old-rod",5,5,100,-1],[87,"good-rod",5,15,20,-1],[87,"old-rod",5,5,100,-1],[88,"good-rod",5,15,20,-1],[88,"old-rod",5,5,100,-1],[89,"good-rod",5,15,20,-1],[89,"old-rod",5,5,100,-1],[81,"good-rod",5,15,20,-1],[81,"old-rod",5,5,100,-1],[90,"good-rod",5,15,20,-1],[90,"old-rod",5,5,100,-1],[91,"good-rod",5,15,20,-1],[91,"old-rod",5,5,100,-1],[106,"good-rod",5,15,100,-1],[106,"old-rod",5,5,100,-1],[106,"super-rod",15,35,99,-1],[82,"good-rod",5,15,20,-1],[82,"old-rod",5,5,100,-1],[0,"good-rod",5,15,20,-1],[0,"old-rod",5,10,100,-1],[19,"good-rod",5,15,20,-1],[19,"old-rod",5,5,100,-1],[10,"good-rod",5,15,20,-1],[10,"old-rod",5,5,100,-1],[29,"good-rod",5,15,20,-1],[29,"old-rod",5,5,100,-1],[30,"good-rod",5,15,20,-1],[30,"old-rod",5,5,100,-1],[13,"good-rod",5,15,20,-1],[13,"old-rod",5,5,100,-1],[92,"good-rod",5,15,20,-1],[92,"old-rod",5,5,100,-1],[24,"good-rod",5,15,20,-1],[24,"old-rod",5,5,100,-1],[2,"good-rod",5,15,20,-1],[2,"old-rod",5,5,100,-1],[3,"good-rod",5,15,20,-1],[3,"old-rod",5,5,100,-1],[76,"good-rod",5,15,20,-1],[76,"old-rod",5,5,100,-1],[78,"good-rod",5,15,20,-1],[78,"old-rod",5,5,100,-1],[31,"good-rod",5,15,20,-1],[31,"old-rod",5,5,100,-1],[45,"good-rod",5,15,20,-1],[45,"old-rod",5,5,100,-1],[46,"good-rod",5,15,20,-1],[46,"old-rod",5,5,100,-1],[47,"good-rod",5,15,20,-1],[47,"old-rod",5,5,100,-1],[48,"good-rod",5,15,20,-1],[48,"old-rod",5,5,100,-1],[93,"good-rod",5,15,20,-1],[93,"old-rod",5,5,100,-1],[16,"good-rod",5,15,20,-1],[16,"old-rod",5,5,100,-1],[59,"good-rod",5,15,20,-1],[59,"old-rod",5,5,100,-1],[62,"good-rod",5,15,20,-1],[62,"old-rod",5,5,100,-1],[33,"good-rod",5,15,20,-1],[33,"old-rod",5,5,100,-1],[34,"good-rod",5,15,20,-1],[34,"old-rod",5,5,100,-1],[35,"good-rod",5,15,20,-1],[35,"old-rod",5,5,100,-1],[17,"good-rod",5,15,20,-1],[17,"old-rod",5,5,100,-1],[94,"good-rod",5,15,20,-1],[94,"old-rod",5,5,100,-1],[95,"good-rod",5,15,20,-1],[95,"old-rod",5,5,100,-1],[18,"good-rod",5,15,20,-1],[18,"old-rod",5,5,100,-1],[96,"good-rod",5,15,20,-1],[96,"old-rod",5,5,100,-1],[97,"good-rod",5,15,20,-1],[97,"old-rod",5,5,100,-1],[98,"good-rod",5,15,20,-1],[98,"old-rod",5,5,100,-1],[36,"good-rod",5,15,20,-1],[36,"old-rod",5,5,100,-1],[37,"good-rod",5,15,20,-1],[37,"old-rod",5,5,100,-1],[99,"good-rod",5,15,20,-1],[99,"old-rod",5,5,100,-1],[100,"good-rod",5,15,20,-1],[100,"old-rod",5,5,100,-1],[101,"good-rod",5,15,20,-1],[101,"old-rod",5,5,100,-1],[83,"good-rod",5,15,20,-1],[83,"old-rod",5,5,100,-1],[102,"good-rod",5,15,20,-1],[102,"old-rod",5,5,100,-1],[115,"gift",5,5,0,-1],[116,"gift",5,5,0,-1]],null],[130,"Léviator","Évolution de Magicarpe",[[56,"super-rod",15,35,16,-1],[75,"super-rod",15,35,16,-1],[6,"super-rod",15,25,15,-1],[87,"super-rod",15,25,15,-1],[88,"super-rod",15,25,15,-1],[89,"super-rod",15,25,15,-1],[81,"super-rod",15,25,15,-1],[90,"super-rod",15,25,15,-1],[91,"super-rod",15,25,15,-1],[82,"super-rod",15,25,15,-1],[0,"super-rod",15,25,15,-1],[19,"super-rod",15,25,15,-1],[10,"super-rod",15,25,15,-1],[29,"super-rod",15,25,15,-1],[30,"super-rod",15,25,15,-1],[13,"super-rod",15,25,15,-1],[92,"super-rod",15,25,15,-1],[24,"super-rod",15,25,15,-1],[2,"super-rod",15,25,15,-1],[3,"super-rod",15,25,15,-1],[76,"super-rod",15,25,15,-1],[78,"super-rod",15,35,16,-1],[31,"super-rod",15,25,15,-1],[93,"super-rod",15,25,15,-1],[16,"super-rod",15,25,15,-1],[59,"super-rod",15,25,15,-1],[62,"super-rod",15,25,15,-1],[33,"super-rod",15,25,15,-1],[34,"super-rod",15,25,15,-1],[35,"super-rod",15,25,15,-1],[17,"super-rod",15,25,15,-1],[94,"super-rod",15,25,15,-1],[95,"super-rod",15,25,15,-1],[18,"super-rod",15,25,15,-1],[96,"super-rod",15,25,15,-1],[97,"super-rod",15,25,15,-1],[98,"super-rod",15,25,15,-1],[36,"super-rod",15,25,15,-1],[37,"super-rod",15,25,15,-1],[99,"super-rod",15,25,15,-1],[100,"super-rod",15,25,15,-1],[101,"super-rod",15,25,15,-1],[83,"super-rod",15,25,15,-1],[102,"super-rod",15,25,15,-1]],null],[131,"Lokhlass",null,[[62,"surf",30,45,1,-1],[117,"gift",25,25,0,-1]],null],[132,"Métamorph",null,[[13,"walk",25,25,5,-1],[14,"walk",23,23,15,-1],[15,"walk",25,25,5,-1],[76,"walk",52,61,11,-1],[77,"walk",55,64,11,-1],[78,"walk",58,67,25,-1],[28,"walk",30,30,10,-1]],null],[133,"Évoli",null,[[118,"gift",25,25,0,-1]],null],[134,"Aquali","Évolution d'Évoli",[],null],[135,"Voltali","Évolution d'Évoli",[],null],[136,"Pyroli","Évolution d'Évoli",[],null],[137,"Porygon",null,[[52,"gift",18,18,0,12]],null],[138,"Amonita",null,[[107,"gift",5,5,0,13]],null],[139,"Amonistar","Évolution d'Amonita",[],null],[140,"Kabuto",null,[[107,"gift",5,5,0,14]],null],[141,"Kabutops","Évolution de Kabuto",[],null],[142,"Ptéra",null,[[107,"gift",5,5,0,15]],null],[143,"Ronflex",null,[[6,"pokeflute",30,30,0,-1],[21,"pokeflute",30,30,0,-1]],null],[144,"Artikodin",null,[[75,"static",50,50,0,-1]],null],[145,"Électhor",null,[[40,"static",50,50,0,-1]],null],[146,"Sulfura",null,[[105,"static",50,50,0,-1]],null],[147,"Minidraco",null,[[45,"super-rod",15,25,15,-1],[46,"super-rod",15,25,15,-1],[47,"super-rod",15,25,15,-1],[48,"super-rod",15,25,15,-1],[52,"gift",24,24,0,16]],null],[148,"Draco","Évolution de Minidraco",[[45,"super-rod",25,35,1,-1],[46,"super-rod",25,35,1,-1],[47,"super-rod",25,35,1,-1],[48,"super-rod",25,35,1,-1]],null],[149,"Dracolosse","Évolution de Draco",[],null],[150,"Mewtwo",null,[[78,"static",70,70,0,-1]],null],[151,"Mew",null,[],null],[161,"Fouinette",null,[[18,"walk",10,15,30,-1],[36,"walk",10,15,30,-1],[38,"walk",10,15,30,-1]],null],[165,"Coxy",null,[[5,"walk",9,14,30,-1]],null],[167,"Mimigal",null,[[5,"walk",9,14,5,-1]],null],[175,"Togepi",null,[[95,"gift-egg",5,5,0,17]],null],[177,"Natu",null,[[37,"walk",15,20,25,-1]],null],[179,"Wattouat",null,[[119,"walk",3,13,100,-1]],null],[183,"Marill",null,[[59,"surf",5,15,5,-1],[37,"surf",5,25,100,-1],[37,"walk",15,15,10,-1],[83,"surf",5,25,70,-1]],null],[187,"Granivol",null,[[94,"surf",5,15,30,-1],[95,"surf",5,15,30,-1],[18,"surf",5,15,30,-1],[18,"walk",10,15,15,-1],[96,"surf",5,15,30,-1],[96,"walk",6,16,100,-1],[102,"surf",5,15,30,-1]],null],[190,"Capumain",null,[[120,"walk",18,28,100,-1]],null],[193,"Yanma",null,[[37,"walk",18,18,10,-1]],null],[200,"Feuforêve",null,[[63,"walk",22,22,5,-1],[64,"walk",22,22,5,-1],[65,"walk",22,22,5,-1],[66,"walk",22,22,5,-1],[67,"walk",22,22,5,-1],[68,"walk",22,22,5,-1],[69,"walk",22,22,5,-1],[70,"walk",22,22,5,-1],[71,"walk",22,22,5,-1],[72,"walk",22,22,5,-1],[73,"walk",15,22,20,-1]],null],[201,"Zarbi",null,[[121,"walk",25,25,100,-1],[122,"walk",25,25,100,-1],[123,"walk",25,25,100,-1],[124,"walk",25,25,100,-1],[125,"walk",25,25,100,-1],[126,"walk",25,25,100,-1],[127,"walk",25,25,100,-1]],null],[202,"Qulbutoké",null,[[76,"walk",55,55,4,-1],[77,"walk",58,58,5,-1],[78,"walk",61,61,1,-1],[37,"walk",25,25,5,-1]],null],[204,"Pomdepik",null,[[128,"walk",19,29,100,-1]],null],[206,"Insolourdo",null,[[129,"walk",5,35,100,-1]],null],[213,"Caratroc",null,[[130,"walk",18,28,100,-1]],null],[214,"Scarhino",null,[[5,"walk",15,30,20,-1]],null],[215,"Farfuret",null,[[60,"walk",30,30,5,-1],[61,"walk",30,30,5,-1]],null],[216,"Teddiursa",null,[[131,"walk",18,28,100,-1]],null],[218,"Limagma",null,[[103,"walk",24,30,30,-1],[104,"walk",22,32,60,-1],[132,"rock-smash",15,35,90,-1],[132,"walk",18,36,100,-1]],null],[219,"Volcaropod","Évolution de Limagma",[[132,"rock-smash",25,45,10,-1]],null],[220,"Marcacrin",null,[[60,"walk",23,31,50,-1],[61,"walk",23,31,50,-1]],null],[223,"Rémoraid",null,[[94,"super-rod",15,25,40,-1],[95,"super-rod",15,25,40,-1],[18,"super-rod",15,25,40,-1],[96,"super-rod",15,25,40,-1],[97,"super-rod",15,25,40,-1],[98,"super-rod",15,25,40,-1],[36,"super-rod",15,25,40,-1],[99,"super-rod",15,25,40,-1],[100,"super-rod",15,25,40,-1]],null],[226,"Démanta",null,[[99,"surf",35,40,5,-1],[100,"surf",35,40,5,-1]],null],[228,"Malosse",null,[[133,"walk",12,22,100,-1]],null],[231,"Phanpy",null,[[38,"walk",10,15,15,-1],[39,"walk",15,15,20,-1]],null],[234,"Cerfrousse",null,[[134,"walk",18,28,100,-1]],null],[235,"Queulorior",null,[[135,"walk",18,28,100,-1]],null],[243,"Raikou",null,[[136,"roaming-grass",50,50,0,18]],null],[244,"Entei",null,[[136,"roaming-grass",50,50,0,19]],null],[245,"Suicune",null,[[136,"roaming-grass",50,50,0,20]],null],[246,"Embrylex",null,[[39,"walk",15,20,5,-1]],null],[249,"Lugia",null,[[137,"static",70,70,0,-1]],null],[250,"Ho-Oh",null,[[137,"static",70,70,0,-1]],null],[251,"Celebi",null,[[41,"colosseum-bonus-disc-jpn",10,10,0,-1]],null],[386,"Deoxys",null,[[138,"static",30,30,0,-1]],null]]}};
+</script>
+<script>
+/* ------------------------------------------------------------------
+   CONFIGURATION
+------------------------------------------------------------------ */
+const GAMES = [
+  { id: 'leafgreen', name: 'Vert Feuille', gen: 3, region: 'Kanto', color: '#2c7f45' },
+];
+
+const GENS = [
+  { n: 1, region: 'Kanto',  from: 1,   to: 151,  color: '#d6403a' },
+  { n: 2, region: 'Johto',  from: 152, to: 251,  color: '#9c7212' },
+  { n: 3, region: 'Hoenn',  from: 252, to: 386,  color: '#1f8a70' },
+  { n: 4, region: 'Sinnoh', from: 387, to: 493,  color: '#2e4a9e' },
+  { n: 5, region: 'Unys',   from: 494, to: 649,  color: '#4a4f5c' },
+  { n: 6, region: 'Kalos',  from: 650, to: 721,  color: '#d0407f' },
+  { n: 7, region: 'Alola',  from: 722, to: 809,  color: '#c4620a' },
+  { n: 8, region: 'Galar',  from: 810, to: 905,  color: '#0c7fb0' },
+  { n: 9, region: 'Paldea', from: 906, to: 1025, color: '#7b2d8e' },
+];
+
+const CRIES = 'https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon';
+const SPRITE = id => `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
+
+/* Cris fournis par PokéAPI : "legacy" (anciens jeux) et "latest" (jeux récents). */
+const LEGACY_MAX_ID = 649;
+const legacyUrl = id => `${CRIES}/legacy/${id}.ogg`;
+const latestUrl = id => `${CRIES}/latest/${id}.ogg`;
+
+/* POUR AJOUTER TES PROPRES CRIS PAR GÉNÉRATION :
+   déclare ici une fonction par génération, par exemple
+   CUSTOM[3] = id => `sons/gen3/${id}.ogg`;
+   Elle passe alors avant le cri "legacy" quand tu es sur cette génération. */
+const CUSTOM = {};
+
+/* ------------------------------------------------------------------
+   ÉTAT
+------------------------------------------------------------------ */
+const $ = id => document.getElementById(id);
+const audio = new Audio();
+audio.preload = 'auto';
+
+let names = {};              // id -> nom affiché
+let currentGen = GENS[0];
+let mode = 'origin';         // 'origin' | 'latest'
+let selected = null;         // id du Pokémon sélectionné
+let activeTab = 'dex';       // 'dex' | 'games'
+let activeGameId = GAMES[0].id;
+
+/* Légendaires et fabuleux : id -> 'legendary' | 'mythical'.
+   Cette liste de secours sert tant que PokéAPI n'a pas répondu (ou s'il est injoignable). */
+const FALLBACK_LEGENDARY = [144,145,146,150,243,244,245,249,250,377,378,379,380,381,382,383,384,
+  480,481,482,483,484,485,486,487,488,638,639,640,641,642,643,644,645,646,716,717,718,772,773,
+  785,786,787,788,789,790,791,792,800,888,889,890,891,892,894,895,896,897,898,
+  1001,1002,1003,1004,1007,1008,1017,1024];
+const FALLBACK_MYTHICAL = [151,251,385,386,489,490,491,492,493,494,647,648,649,719,720,721,
+  801,802,807,808,809,893,1025];
+let rare = {};
+FALLBACK_LEGENDARY.forEach(i => { rare[i] = 'legendary'; });
+FALLBACK_MYTHICAL.forEach(i => { rare[i] = 'mythical'; });
+
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
+
+/* Thème clair / sombre : suit le réglage du téléphone tant que tu n'as pas choisi. */
+function currentTheme() { return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'; }
+function curGame() { return GAMES.find(g => g.id === activeGameId) || GAMES[0]; }
+function accentColor() { return activeTab === 'games' ? curGame().color : currentGen.color; }
+function applyAccent() {
+  document.documentElement.style.setProperty('--accent', accentColor());
+  updateThemeUi();
+}
+
+function updateThemeUi() {
+  const dark = currentTheme() === 'dark';
+  const btn = $('themeBtn');
+  btn.textContent = dark ? '☀️' : '🌙';
+  btn.setAttribute('aria-label', dark ? 'Passer en mode clair' : 'Passer en mode sombre');
+  $('themeColor').setAttribute('content', dark ? '#0f141c' : accentColor());
+}
+function setTheme(t, save) {
+  document.documentElement.setAttribute('data-theme', t);
+  if (save) store.set('cries-theme', t);
+  updateThemeUi();
+}
+$('themeBtn').addEventListener('click', () => setTheme(currentTheme() === 'dark' ? 'light' : 'dark', true));
+try {
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+    if (!store.get('cries-theme')) setTheme(e.matches ? 'dark' : 'light', false);
+  });
+} catch {}
+
+/* Pokémon possédés : enregistrés dans le navigateur de ce téléphone. */
+let owned = new Set();
+try { owned = new Set((JSON.parse(store.get('cries-owned-v1') || '[]') || []).map(Number)); } catch {}
+let shownCount = 0;
+let shownQuery = false;
+
+function updateOwnUi() {
+  let inGen = 0;
+  owned.forEach(i => { if (i >= currentGen.from && i <= currentGen.to) inGen++; });
+  $('count').textContent = shownQuery
+    ? `${shownCount} résultat${shownCount > 1 ? 's' : ''} en génération ${currentGen.n}`
+    : `${shownCount} Pokémon · ${currentGen.region} · ${inGen} possédé${inGen > 1 ? 's' : ''}`;
+  $('ownTotal').textContent = `Possédés : ${owned.size} / ${GENS[GENS.length - 1].to}`;
+  $('resetOwn').disabled = owned.size === 0;
+}
+
+function setOwned(id, value) {
+  if (value) owned.add(id); else owned.delete(id);
+  store.set('cries-owned-v1', JSON.stringify([...owned]));
+  document.querySelectorAll(`.own[data-own="${id}"]`).forEach(b => b.setAttribute('aria-checked', String(value)));
+  if (selected === id) $('sOwn').checked = value;
+  updateOwnUi();
+}
+
+function resetOwned() {
+  if (!owned.size) return;
+  if (!confirm(`Décocher les ${owned.size} Pokémon que tu possèdes ? Cette action est définitive.`)) return;
+  owned.clear();
+  store.set('cries-owned-v1', '[]');
+  document.querySelectorAll('.own').forEach(b => b.setAttribute('aria-checked', 'false'));
+  if (selected) $('sOwn').checked = false;
+  updateOwnUi();
+}
+
+/* ------------------------------------------------------------------
+   NOMS (PokéAPI) : anglais d'abord, puis français si disponible
+------------------------------------------------------------------ */
+const prettify = s => s.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
+async function loadNames() {
+  const cached = store.get('cries-names-v1');
+  if (cached) {
+    try { names = JSON.parse(cached); render(); return; } catch {}
+  }
+  try {
+    const r = await fetch('https://pokeapi.co/api/v2/pokemon-species?limit=1025');
+    const j = await r.json();
+    j.results.forEach(x => {
+      const id = Number(x.url.split('/').filter(Boolean).pop());
+      names[id] = prettify(x.name);
+    });
+    render();
+  } catch {}
+  const data = await gql(p => `{ ${p}pokemonspeciesname(where:{language_id:{_eq:5}}) { pokemon_species_id name } }`);
+  const rows = data && Object.values(data)[0];
+  if (rows && rows.length) {
+    rows.forEach(x => { names[x.pokemon_species_id] = x.name; });
+    store.set('cries-names-v1', JSON.stringify(names));
+    render();
+  }
+}
+
+/* PokéAPI GraphQL : l'ancien endpoint (v1beta) est en cours d'arrêt, le nouveau est v1beta2.
+   On essaie le nouveau, puis l'ancien. */
+const GQL_ENDPOINTS = [
+  { url: 'https://graphql.pokeapi.co/v1beta2', prefix: '' },
+  { url: 'https://beta.pokeapi.co/graphql/v1beta', prefix: 'pokemon_v2_' },
+];
+async function gql(buildQuery) {
+  for (const g of GQL_ENDPOINTS) {
+    try {
+      const r = await fetch(g.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: buildQuery(g.prefix) }),
+      });
+      const j = await r.json();
+      if (j && j.data) return j.data;
+    } catch {}
+  }
+  return null;
+}
+
+async function loadRare() {
+  const cached = store.get('cries-rare-v1');
+  if (cached) {
+    try { rare = JSON.parse(cached); render(); return; } catch {}
+  }
+  const data = await gql(p => `{ ${p}pokemonspecies(where:{_or:[{is_legendary:{_eq:true}},{is_mythical:{_eq:true}}]}) { id is_legendary is_mythical } }`);
+  const rows = data && Object.values(data)[0];
+  if (rows && rows.length) {
+    const fresh = {};
+    rows.forEach(x => { fresh[x.id] = x.is_mythical ? 'mythical' : 'legendary'; });
+    rare = fresh;
+    store.set('cries-rare-v1', JSON.stringify(rare));
+    render();
+  }
+}
+
+/* ------------------------------------------------------------------
+   AFFICHAGE
+------------------------------------------------------------------ */
+function buildGens() {
+  const box = $('gens');
+  GENS.forEach(g => {
+    const b = document.createElement('button');
+    b.className = 'gen';
+    b.dataset.n = g.n;
+    b.innerHTML = `<b>Gén. ${g.n}</b><span>${g.region}</span>`;
+    b.addEventListener('click', () => setGen(g.n));
+    box.appendChild(b);
+  });
+}
+
+function setGen(n, keepScroll) {
+  currentGen = GENS.find(g => g.n === n) || GENS[0];
+  store.set('cries-gen', String(currentGen.n));
+  applyAccent();
+  document.querySelectorAll('.gen').forEach(b =>
+    b.setAttribute('aria-pressed', String(Number(b.dataset.n) === currentGen.n)));
+  $('q').value = '';
+  render();
+  if (!keepScroll) window.scrollTo({ top: 0 });
+}
+
+function markGameRare() {
+  document.querySelectorAll('.grow').forEach(li => li.classList.toggle('rare', !!rare[li.dataset.id]));
+}
+
+function render() {
+  markGameRare();
+  const q = $('q').value.trim().toLowerCase();
+  const grid = $('grid');
+  const items = [];
+  for (let id = currentGen.from; id <= currentGen.to; id++) {
+    const name = names[id] || '';
+    if (q && !(name.toLowerCase().includes(q) || String(id) === q.replace(/^#/, '') || String(id).padStart(3, '0').includes(q.replace(/^#/, '')))) continue;
+    items.push({ id, name });
+  }
+  shownCount = items.length;
+  shownQuery = !!q;
+  updateOwnUi();
+
+  if (!items.length) {
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1">Aucun Pokémon trouvé dans cette génération.</div>';
+    return;
+  }
+  grid.innerHTML = items.map(({ id, name }) => `
+    <div class="cell">
+      <button class="mon${rare[id] ? ' rare' : ''}" data-id="${id}" aria-pressed="${id === selected}" aria-label="${name || 'Pokémon ' + id}${rare[id] ? (rare[id] === 'mythical' ? ', fabuleux' : ', légendaire') : ''}">
+        <img loading="lazy" decoding="async" alt="" src="${SPRITE(id)}">
+        <span class="num">#${String(id).padStart(3, '0')}</span>
+        <span class="name">${name || '…'}</span>
+      </button>
+      <button class="own" data-own="${id}" role="checkbox" aria-checked="${owned.has(id)}" aria-label="Je possède ${name || 'Pokémon ' + id}"></button>
+    </div>`).join('');
+}
+
+$('grid').addEventListener('click', e => {
+  const o = e.target.closest('.own');
+  if (o) {
+    const id = Number(o.dataset.own);
+    setOwned(id, !owned.has(id));
+    return;
+  }
+  const t = e.target.closest('.mon');
+  if (!t) return;
+  select(Number(t.dataset.id));
+});
+$('q').addEventListener('input', render);
+$('resetOwn').addEventListener('click', resetOwned);
+$('sOwn').addEventListener('change', e => { if (selected) setOwned(selected, e.target.checked); });
+
+/* ------------------------------------------------------------------
+   LECTURE DU CRI
+------------------------------------------------------------------ */
+function candidates(id) {
+  const latest = { url: latestUrl(id), label: 'cri récent' };
+  if (mode === 'latest') return [latest];
+  const list = [];
+  if (CUSTOM[currentGen.n]) list.push({ url: CUSTOM[currentGen.n](id), label: `cri de la génération ${currentGen.n}` });
+  if (id <= LEGACY_MAX_ID) list.push({ url: legacyUrl(id), label: 'cri d’origine' });
+  list.push(latest);
+  return list;
+}
+
+async function playCry(id) {
+  const list = candidates(id);
+  const info = $('pInfo');
+  for (let i = 0; i < list.length; i++) {
+    try {
+      audio.pause();
+      audio.src = list[i].url;
+      audio.currentTime = 0;
+      await audio.play();
+      info.textContent = i === 0
+        ? `Génération ${currentGen.n} · ${list[i].label}`
+        : `Pas de cri d’origine, ${list[i].label} joué`;
+      return true;
+    } catch (err) {
+      if (err && err.name === 'NotAllowedError') { info.textContent = 'Touche ▶ pour lancer le son.'; return false; }
+    }
+  }
+  info.textContent = 'Cri introuvable. Vérifie ta connexion.';
+  return false;
+}
+
+function genOf(id) { return GENS.find(g => id >= g.from && id <= g.to) || GENS[0]; }
+
+function select(id) {
+  const g = genOf(id);
+  if (g.n !== currentGen.n) setGen(g.n, true);
+  selected = id;
+  const name = names[id] || `Pokémon ${id}`;
+  $('pName').textContent = `#${String(id).padStart(3, '0')} ${name}`;
+  $('pImg').src = SPRITE(id);
+  $('pImg').alt = name;
+  $('replay').disabled = false;
+  document.querySelectorAll('.mon').forEach(el => {
+    el.setAttribute('aria-pressed', String(Number(el.dataset.id) === id));
+    el.classList.toggle('playing', Number(el.dataset.id) === id);
+  });
+  playCry(id);
+  openSheet();
+  loadDetails(id);
+  setTimeout(() => document.querySelectorAll('.mon.playing').forEach(el => el.classList.remove('playing')), 1100);
+}
+
+$('replay').addEventListener('click', () => { if (selected) playCry(selected); });
+
+function setMode(m) {
+  mode = m;
+  store.set('cries-mode', m);
+  $('mOrigin').setAttribute('aria-pressed', String(m === 'origin'));
+  $('mLatest').setAttribute('aria-pressed', String(m === 'latest'));
+  if (selected) playCry(selected);
+}
+$('mOrigin').addEventListener('click', () => setMode('origin'));
+$('mLatest').addEventListener('click', () => setMode('latest'));
+
+/* ------------------------------------------------------------------
+   DÉMARRAGE
+------------------------------------------------------------------ */
+buildGens();
+const savedMode = store.get('cries-mode');
+if (savedMode === 'latest') { mode = 'latest'; $('mOrigin').setAttribute('aria-pressed', 'false'); $('mLatest').setAttribute('aria-pressed', 'true'); }
+setGen(Number(store.get('cries-gen')) || 1, true);
+loadNames();
+loadRare();
+
+/* ------------------------------------------------------------------
+   FICHE DÉTAILLÉE
+------------------------------------------------------------------ */
+const API = 'https://pokeapi.co/api/v2';
+const ART = id => `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
+const MAX_ID = 1025;
+
+const TYPES = {
+  normal:   ['Normal',   '#a8a878', '#1a2230'], fire:     ['Feu',      '#dd5528', '#ffffff'],
+  water:    ['Eau',      '#3d7dd8', '#ffffff'], electric: ['Électrik', '#f2c318', '#1a2230'],
+  grass:    ['Plante',   '#4c9a3a', '#ffffff'], ice:      ['Glace',    '#7fd0d6', '#1a2230'],
+  fighting: ['Combat',   '#b3352b', '#ffffff'], poison:   ['Poison',   '#9143a8', '#ffffff'],
+  ground:   ['Sol',      '#d4b25c', '#1a2230'], flying:   ['Vol',      '#8d9ee8', '#1a2230'],
+  psychic:  ['Psy',      '#e0508a', '#ffffff'], bug:      ['Insecte',  '#7f9418', '#ffffff'],
+  rock:     ['Roche',    '#b19b3c', '#1a2230'], ghost:    ['Spectre',  '#6a5590', '#ffffff'],
+  dragon:   ['Dragon',   '#5a3fd4', '#ffffff'], dark:     ['Ténèbres', '#5a4a40', '#ffffff'],
+  steel:    ['Acier',    '#8f9db0', '#1a2230'], fairy:    ['Fée',      '#e88fc4', '#1a2230'],
+};
+
+const EGG_GROUPS = {
+  monster: 'Monstre', water1: 'Eau 1', water2: 'Eau 2', water3: 'Eau 3', bug: 'Insecte',
+  flying: 'Vol', ground: 'Terrestre', fairy: 'Fée', plant: 'Végétal', humanshape: 'Humanoïde',
+  mineral: 'Minéral', indeterminate: 'Amorphe', ditto: 'Métamorph', dragon: 'Draconique',
+  'no-eggs': 'Inconnu',
+};
+
+const GEN_VERSIONS = {
+  1: ['red', 'blue', 'yellow'],
+  2: ['gold', 'silver', 'crystal'],
+  3: ['ruby', 'sapphire', 'emerald', 'firered', 'leafgreen'],
+  4: ['diamond', 'pearl', 'platinum', 'heartgold', 'soulsilver'],
+  5: ['black', 'white', 'black-2', 'white-2'],
+  6: ['x', 'y', 'omega-ruby', 'alpha-sapphire'],
+  7: ['sun', 'moon', 'ultra-sun', 'ultra-moon', 'lets-go-pikachu', 'lets-go-eevee'],
+  8: ['sword', 'shield', 'brilliant-diamond', 'shining-pearl', 'legends-arceus'],
+  9: ['scarlet', 'violet'],
+};
+const ALL_VERSIONS = Object.values(GEN_VERSIONS).flat();
+
+const VERSION_FR = {
+  red: 'Rouge', blue: 'Bleu', yellow: 'Jaune', gold: 'Or', silver: 'Argent', crystal: 'Cristal',
+  ruby: 'Rubis', sapphire: 'Saphir', emerald: 'Émeraude', firered: 'Rouge Feu', leafgreen: 'Vert Feuille',
+  diamond: 'Diamant', pearl: 'Perle', platinum: 'Platine', heartgold: 'HeartGold', soulsilver: 'SoulSilver',
+  black: 'Noir', white: 'Blanc', 'black-2': 'Noir 2', 'white-2': 'Blanc 2',
+  x: 'X', y: 'Y', 'omega-ruby': 'Rubis Oméga', 'alpha-sapphire': 'Saphir Alpha',
+  sun: 'Soleil', moon: 'Lune', 'ultra-sun': 'Ultra-Soleil', 'ultra-moon': 'Ultra-Lune',
+  'lets-go-pikachu': 'Let’s Go Pikachu', 'lets-go-eevee': 'Let’s Go Évoli',
+  sword: 'Épée', shield: 'Bouclier', 'brilliant-diamond': 'Diamant Étincelant',
+  'shining-pearl': 'Perle Scintillante', 'legends-arceus': 'Légendes Arceus',
+  scarlet: 'Écarlate', violet: 'Violet',
+};
+const versionLabel = v => VERSION_FR[v] || prettify(v);
+
+const METHODS_FR = {
+  walk: 'Herbes hautes / marche', surf: 'Surf', 'old-rod': 'Canne', 'good-rod': 'Super Canne',
+  'super-rod': 'Méga Canne', 'rock-smash': 'Éclate-Roc', headbutt: 'Coud’Boule',
+  gift: 'Cadeau', 'gift-egg': 'Œuf cadeau', 'only-one': 'Rencontre unique', pokeflute: 'Poké Flûte',
+  'cave-spots': 'Grotte', 'bridge-spots': 'Pont', 'dark-grass': 'Herbes sombres',
+  'grass-spots': 'Herbes agitées', 'yellow-flowers': 'Fleurs jaunes', 'purple-flowers': 'Fleurs violettes',
+  'red-flowers': 'Fleurs rouges', 'rough-terrain': 'Terrain accidenté', 'seaweed': 'Algues',
+};
+
+const TRIGGERS_FR = {
+  spin: 'Tourner sur soi-même avec une confiserie',
+  'tower-of-darkness': 'Tour des Ténèbres',
+  'tower-of-waters': 'Tour des Eaux',
+  'three-critical-hits': 'Réussir 3 coups critiques dans un même combat',
+  'take-damage': 'Encaisser des dégâts, puis passer sous l’arche de pierre',
+  other: 'Condition spéciale',
+};
+
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const idFromUrl = u => Number(u.split('/').filter(Boolean).pop());
+const frLang = arr => (arr || []).find(x => x.language && x.language.name === 'fr');
+const cleanText = t => t.replace(/[\n\f\u00ad]/g, ' ').replace(/\s+/g, ' ').trim();
+const nameOf = (id, slug) => names[id] || prettify(slug);
+
+const jsonCache = new Map();
+function getJson(url) {
+  if (!jsonCache.has(url)) {
+    const p = fetch(url).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+    p.catch(() => jsonCache.delete(url));
+    jsonCache.set(url, p);
+  }
+  return jsonCache.get(url);
+}
+
+const nameCache = new Map();
+function frName(url, fallback) {
+  if (!nameCache.has(url)) {
+    nameCache.set(url, getJson(url).then(j => {
+      const n = frLang(j.names);
+      return n ? (n.name || n.awesome_name || fallback) : fallback;
+    }).catch(() => fallback));
+  }
+  return nameCache.get(url);
+}
+
+async function frArea(url, fallback) {
+  try {
+    const a = await getJson(url);
+    const n = frLang(a.names);
+    if (n && n.name) return n.name;
+    if (a.location) return await frName(a.location.url, fallback);
+  } catch {}
+  return fallback;
+}
+
+/* ---------- ouverture / fermeture de la fiche ---------- */
+let sheetOpen = false;
+let detailToken = 0;
+
+function openSheet() {
+  if (!sheetOpen) {
+    sheetOpen = true;
+    try { history.pushState({ sheet: 1 }, ''); } catch {}
+  }
+  $('sheet').hidden = false;
+  document.body.style.overflow = 'hidden';
+}
+function closeSheet(fromPop) {
+  if (!sheetOpen) return;
+  sheetOpen = false;
+  detailToken++;
+  $('sheet').hidden = true;
+  document.body.style.overflow = '';
+  if (!fromPop) { try { history.back(); } catch {} }
+}
+window.addEventListener('popstate', () => { if (sheetOpen) closeSheet(true); });
+$('sClose').addEventListener('click', () => closeSheet(false));
+$('sPrev').addEventListener('click', () => { if (selected > 1) select(selected - 1); });
+$('sNext').addEventListener('click', () => { if (selected < MAX_ID) select(selected + 1); });
+
+function showRareBadge(id) {
+  const el = $('sRare');
+  const kind = rare[id];
+  if (!kind) { el.hidden = true; el.innerHTML = ''; return; }
+  el.innerHTML = `<span>${kind === 'mythical' ? 'Pokémon fabuleux' : 'Pokémon légendaire'}</span>`;
+  el.hidden = false;
+}
+
+function resetSheet(id) {
+  $('sNum').textContent = `#${String(id).padStart(3, '0')}`;
+  $('sOwn').checked = owned.has(id);
+  $('sName').textContent = names[id] || `Pokémon ${id}`;
+  const art = $('sArt');
+  art.onerror = () => { art.onerror = null; art.src = SPRITE(id); };
+  art.alt = names[id] || '';
+  art.src = ART(id);
+  art.classList.toggle('rare', !!rare[id]);
+  showRareBadge(id);
+  $('sGenus').textContent = '';
+  $('sTypes').innerHTML = '';
+  $('sFacts').innerHTML = '';
+  $('sDesc').textContent = 'Chargement…';
+  $('sDescSrc').textContent = '';
+  $('sEvo').innerHTML = '<p class="muted">Chargement…</p>';
+  $('sWhere').innerHTML = '<p class="muted">Chargement…</p>';
+  $('sPrev').disabled = id <= 1;
+  $('sNext').disabled = id >= MAX_ID;
+  $('sBody').scrollTop = 0;
+}
+
+/* ---------- chargement principal ---------- */
+function pickFlavor(species, genN) {
+  const all = species.flavor_text_entries || [];
+  const vs = GEN_VERSIONS[genN] || [];
+  for (const lang of ['fr', 'en']) {
+    const list = all.filter(e => e.language.name === lang);
+    let e = null;
+    for (const v of vs) { e = list.find(x => x.version.name === v); if (e) break; }
+    if (!e && list.length) e = list[list.length - 1];
+    if (e) return { text: cleanText(e.flavor_text), version: e.version.name, lang };
+  }
+  return null;
+}
+
+async function loadDetails(id) {
+  const token = ++detailToken;
+  const genN = currentGen.n;
+  resetSheet(id);
+  let poke, species;
+  try {
+    [poke, species] = await Promise.all([getJson(`${API}/pokemon/${id}`), getJson(`${API}/pokemon-species/${id}`)]);
+  } catch {
+    if (token !== detailToken) return;
+    $('sDesc').textContent = 'Impossible de charger la fiche. Vérifie ta connexion.';
+    $('sEvo').innerHTML = '';
+    $('sWhere').innerHTML = '';
+    return;
+  }
+  if (token !== detailToken) return;
+
+  const frNameSpecies = frLang(species.names);
+  if (frNameSpecies) { names[id] = frNameSpecies.name; $('sName').textContent = frNameSpecies.name; $('pName').textContent = `#${String(id).padStart(3, '0')} ${frNameSpecies.name}`; }
+
+  const kind = species.is_mythical ? 'mythical' : species.is_legendary ? 'legendary' : null;
+  if ((rare[id] || null) !== kind) {
+    if (kind) rare[id] = kind; else delete rare[id];
+    $('sArt').classList.toggle('rare', !!kind);
+    showRareBadge(id);
+    render();
+  }
+
+  const genus = frLang(species.genera) || (species.genera || []).find(g => g.language.name === 'en');
+  $('sGenus').textContent = genus ? genus.genus : '';
+
+  $('sTypes').innerHTML = poke.types.slice().sort((a, b) => a.slot - b.slot).map(t => {
+    const T = TYPES[t.type.name] || [prettify(t.type.name), '#888', '#fff'];
+    return `<span class="type" style="background:${T[1]};color:${T[2]}">${esc(T[0])}</span>`;
+  }).join('');
+
+  const fl = pickFlavor(species, genN);
+  if (fl) {
+    $('sDesc').textContent = fl.text;
+    $('sDescSrc').textContent = `Version ${versionLabel(fl.version)}${fl.lang === 'en' ? ' · texte en anglais' : ''}`;
+  } else {
+    $('sDesc').textContent = 'Pas de description disponible.';
+  }
+
+  // évolutions et lieux en parallèle, sans bloquer le reste
+  loadEvolutions(species, token);
+  loadWhere(id, token, genN);
+
+  const [abilities, shape] = await Promise.all([
+    Promise.all(poke.abilities.slice().sort((a, b) => a.slot - b.slot).map(async a => {
+      const n = await frName(a.ability.url, prettify(a.ability.name));
+      return a.is_hidden ? `${n} (caché)` : n;
+    })),
+    species.shape ? frName(species.shape.url, prettify(species.shape.name)) : Promise.resolve('—'),
+  ]);
+  if (token !== detailToken) return;
+
+  const kg = (poke.weight / 10).toFixed(1).replace('.', ',');
+  const m = (poke.height / 10).toFixed(1).replace('.', ',');
+  const rate = species.capture_rate;
+  const eggs = (species.egg_groups || []).map(g => EGG_GROUPS[g.name] || prettify(g.name)).join(', ') || '—';
+  const fact = (label, val, cls = '') => `<div class="fact ${cls}"><dt>${label}</dt><dd>${val}</dd></div>`;
+
+  $('sFacts').innerHTML =
+    fact('Poids', `${kg} kg`) +
+    fact('Taille', `${m} m`) +
+    fact('Taux de capture', `${rate} / 255<div class="bar"><i style="width:${Math.max(2, Math.round(rate / 255 * 100))}%"></i></div>`, 'wide') +
+    fact('Groupe d’œuf', esc(eggs)) +
+    fact('Forme', esc(shape)) +
+    fact('Talents', abilities.map(esc).join(', ') || '—', 'wide');
+}
+
+/* ---------- évolutions ---------- */
+async function describeOne(d) {
+  const t = d.trigger && d.trigger.name;
+  let main;
+  if (t === 'level-up') main = d.min_level ? `Niv. ${d.min_level}` : 'Montée de niveau';
+  else if (t === 'trade') main = 'Échange';
+  else if (t === 'use-item') main = d.item ? `Utiliser ${await frName(d.item.url, prettify(d.item.name))}` : 'Utiliser un objet';
+  else if (t === 'shed') main = 'Niv. 20, avec une place libre dans l’équipe et une Poké Ball';
+  else main = TRIGGERS_FR[t] || 'Condition spéciale';
+
+  const parts = [];
+  if (d.held_item) parts.push(`en tenant ${await frName(d.held_item.url, prettify(d.held_item.name))}`);
+  if (d.trade_species) parts.push(`contre ${nameOf(idFromUrl(d.trade_species.url), d.trade_species.name)}`);
+  if (d.min_happiness) parts.push(`bonheur ≥ ${d.min_happiness}`);
+  if (d.min_affection) parts.push(`affection ≥ ${d.min_affection}`);
+  if (d.min_beauty) parts.push(`beauté ≥ ${d.min_beauty}`);
+  if (d.known_move) parts.push(`en connaissant ${await frName(d.known_move.url, prettify(d.known_move.name))}`);
+  if (d.known_move_type) parts.push(`en connaissant une capacité de type ${(TYPES[d.known_move_type.name] || [prettify(d.known_move_type.name)])[0]}`);
+  if (d.location) parts.push(`à ${await frName(d.location.url, prettify(d.location.name))}`);
+  if (d.time_of_day) parts.push({ day: 'de jour', night: 'de nuit', dusk: 'au crépuscule' }[d.time_of_day] || d.time_of_day);
+  if (d.gender === 1) parts.push('femelle uniquement');
+  if (d.gender === 2) parts.push('mâle uniquement');
+  if (d.needs_overworld_rain) parts.push('sous la pluie');
+  if (d.party_species) parts.push(`avec ${nameOf(idFromUrl(d.party_species.url), d.party_species.name)} dans l’équipe`);
+  if (d.party_type) parts.push(`avec un Pokémon de type ${(TYPES[d.party_type.name] || [prettify(d.party_type.name)])[0]} dans l’équipe`);
+  if (d.relative_physical_stats === 1) parts.push('Attaque > Défense');
+  if (d.relative_physical_stats === -1) parts.push('Attaque < Défense');
+  if (d.relative_physical_stats === 0) parts.push('Attaque = Défense');
+  if (d.turn_upside_down) parts.push('console retournée');
+  return parts.length ? `${main}, ${parts.join(', ')}` : main;
+}
+
+async function describeEvo(details) {
+  if (!details || !details.length) return 'Évolution';
+  const list = await Promise.all(details.map(describeOne));
+  return [...new Set(list)].join(' ou ');
+}
+
+async function evoNodeHtml(node) {
+  const id = idFromUrl(node.species.url);
+  const name = nameOf(id, node.species.name);
+  let html = `<div class="evo-node"><button class="evo-mon${id === selected ? ' current' : ''}${rare[id] ? ' rare' : ''}" data-id="${id}">` +
+             `<img loading="lazy" alt="" src="${SPRITE(id)}"><span>${esc(name)}</span></button>`;
+  if (node.evolves_to.length) {
+    const kids = await Promise.all(node.evolves_to.map(async c => {
+      const cond = await describeEvo(c.evolution_details);
+      return `<div class="evo-branch"><div class="evo-cond">${esc(cond)}</div>${await evoNodeHtml(c)}</div>`;
+    }));
+    html += `<div class="evo-children">${kids.join('')}</div>`;
+  }
+  return html + '</div>';
+}
+
+async function loadEvolutions(species, token) {
+  const box = $('sEvo');
+  try {
+    if (!species.evolution_chain) { box.innerHTML = '<p class="muted">Ce Pokémon n’évolue pas.</p>'; return; }
+    const chain = await getJson(species.evolution_chain.url);
+    if (token !== detailToken) return;
+    if (!chain.chain.evolves_to.length) { box.innerHTML = '<p class="muted">Ce Pokémon n’a pas d’évolution.</p>'; return; }
+    const html = await evoNodeHtml(chain.chain);
+    if (token !== detailToken) return;
+    box.innerHTML = html;
+  } catch {
+    if (token === detailToken) box.innerHTML = '<p class="muted">Impossible de charger les évolutions.</p>';
+  }
+}
+
+$('sEvo').addEventListener('click', e => {
+  const b = e.target.closest('.evo-mon');
+  if (b) select(Number(b.dataset.id));
+});
+
+/* ---------- où le trouver ---------- */
+const MAX_AREAS = 6;
+
+async function loadWhere(id, token, genN) {
+  const box = $('sWhere');
+  let data;
+  try { data = await getJson(`${API}/pokemon/${id}/encounters`); }
+  catch { if (token === detailToken) box.innerHTML = '<p class="muted">Impossible de charger les lieux.</p>'; return; }
+  if (token !== detailToken) return;
+
+  const byVersion = {};
+  data.forEach(loc => loc.version_details.forEach(vd => {
+    const map = byVersion[vd.version.name] || (byVersion[vd.version.name] = new Map());
+    const cur = map.get(loc.location_area.name) || { url: loc.location_area.url, methods: new Set(), min: 999, max: 0 };
+    vd.encounter_details.forEach(ed => {
+      cur.methods.add(ed.method.name);
+      cur.min = Math.min(cur.min, ed.min_level);
+      cur.max = Math.max(cur.max, ed.max_level);
+    });
+    map.set(loc.location_area.name, cur);
+  }));
+
+  let versions = (GEN_VERSIONS[genN] || []).filter(v => byVersion[v]);
+  let note = '';
+  if (!versions.length) {
+    const other = ALL_VERSIONS.filter(v => byVersion[v]);
+    if (!other.length) {
+      box.innerHTML = '<p class="muted">Aucun lieu sauvage renseigné. Ce Pokémon s’obtient par évolution, cadeau, échange, événement ou dans un jeu absent de la base de données.</p>';
+      return;
+    }
+    versions = [other[other.length - 1]];
+    note = `<p class="muted">Rien de renseigné pour la génération ${genN}. Dernier jeu disponible :</p>`;
+  }
+
+  const areaJobs = [];
+  let html = note;
+  versions.forEach(v => {
+    const areas = [...byVersion[v].entries()];
+    html += `<div class="where-ver">Pokémon ${esc(versionLabel(v))}</div><ul class="where-list">`;
+    areas.slice(0, MAX_AREAS).forEach(([slug, info], i) => {
+      const fallback = prettify(slug.replace(/-area$/, ''));
+      const methods = [...info.methods].map(m => METHODS_FR[m] || prettify(m)).join(', ');
+      const lv = info.max ? (info.min === info.max ? `niv. ${info.min}` : `niv. ${info.min}–${info.max}`) : '';
+      const key = `w-${v}-${i}`;
+      html += `<li><b id="${key}">${esc(fallback)}</b><span>${esc([methods, lv].filter(Boolean).join(' · '))}</span></li>`;
+      areaJobs.push({ key, url: info.url, fallback });
+    });
+    html += '</ul>';
+    if (areas.length > MAX_AREAS) html += `<p class="where-more">+ ${areas.length - MAX_AREAS} autre${areas.length - MAX_AREAS > 1 ? 's' : ''} lieu${areas.length - MAX_AREAS > 1 ? 'x' : ''}</p>`;
+  });
+  box.innerHTML = html;
+
+  // noms de lieux en français, au fur et à mesure
+  areaJobs.forEach(async j => {
+    const n = await frArea(j.url, j.fallback);
+    if (token !== detailToken) return;
+    const el = document.getElementById(j.key);
+    if (el) el.textContent = n;
+  });
+}
+
+/* ------------------------------------------------------------------
+   ONGLETS ET LISTES PAR JEU
+------------------------------------------------------------------ */
+const GAME_METHOD = {
+  walk: 'Herbes et grottes', surf: 'Surf', 'old-rod': 'Canne', 'good-rod': 'Super Canne', 'super-rod': 'Méga Canne',
+  'rock-smash': 'Éclate-Roc', gift: 'Cadeau', 'gift-egg': 'Œuf cadeau', static: 'Rencontre fixe',
+  pokeflute: 'Pokéflûte', 'roaming-grass': 'Errant', 'npc-trade': 'Échange avec un dresseur',
+  'colosseum-bonus-disc-jpn': 'Événement',
+};
+const gm = m => GAME_METHOD[m] || prettify(m);
+const norm = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const baseArea = a => a.replace(/\s*\(.*\)\s*$/, '');
+
+/* Pokémon possédés, séparément pour chaque jeu */
+const gameOwned = {};
+try {
+  const saved = JSON.parse(store.get('cries-games-owned-v1') || '{}') || {};
+  Object.keys(saved).forEach(k => { gameOwned[k] = new Set((saved[k] || []).map(Number)); });
+} catch {}
+const gameSet = () => gameOwned[curGame().id] || (gameOwned[curGame().id] = new Set());
+function saveGameOwned() {
+  const o = {};
+  Object.keys(gameOwned).forEach(k => { o[k] = [...gameOwned[k]]; });
+  store.set('cries-games-owned-v1', JSON.stringify(o));
+}
+
+let gameFilter = 'all';
+let gameQuery = '';
+const gameOpen = new Set();         // lignes dépliées : "jeu:numéro"
+const scrollPos = { dex: 0, games: 0 };
+
+/* Prépare une fois les lignes d'un jeu (textes, résumé, texte de recherche) */
+const prepared = {};
+function prep(gameId) {
+  if (prepared[gameId]) return prepared[gameId];
+  const raw = GAME_DATA[gameId];
+  if (!raw) return (prepared[gameId] = []);
+  prepared[gameId] = raw.dex.map(([id, name, evo, places, elsewhere]) => {
+    const rows = places.map(([a, m, lo, hi, pct, n]) =>
+      ({ area: raw.areas[a], method: m, lo, hi, pct, note: n >= 0 ? raw.notes[n] : '' }));
+    const bases = [...new Set(rows.map(r => baseArea(r.area)))];
+    const methods = [...new Set(rows.map(r => r.method))];
+    let sum;
+    if (rows.length) {
+      const k = bases.length - 2;
+      const head = bases.slice(0, 2).join(', ') + (k > 0 ? ` et ${k} autre${k > 1 ? 's' : ''}` : '');
+      sum = (methods.length === 1 ? gm(methods[0]) + ' · ' : '') + head;
+    } else if (evo) {
+      sum = evo;
+    } else if (elsewhere) {
+      sum = `Absent de cette version · à échanger depuis ${elsewhere}`;
+    } else {
+      sum = 'Introuvable dans le jeu (événement)';
+    }
+    const hay = norm([name, ...rows.map(r => r.area), ...methods.map(gm), ...rows.map(r => r.note)].join(' '));
+    return { id, name, evo, rows, sum, hay };
+  });
+  return prepared[gameId];
+}
+
+function placeLine(r) {
+  const bits = [gm(r.method)];
+  if (r.hi) bits.push(r.lo === r.hi ? `niv. ${r.lo}` : `niv. ${r.lo}–${r.hi}`);
+  if (r.pct) bits.push(`${r.pct} %`);
+  if (r.note) bits.push(r.note);
+  return `<li><b>${esc(r.area)}</b><span>${esc(bits.join(' · '))}</span></li>`;
+}
+
+function rowHtml(e, have, open) {
+  const g = curGame();
+  const detail = e.rows.length
+    ? (e.evo ? `<p class="evo">${esc(e.evo)}</p>` : '') + `<ul>${e.rows.map(placeLine).join('')}</ul>`
+    : '';
+  return `<li class="grow${rare[e.id] ? ' rare' : ''}${e.rows.length ? '' : ' plain'}" data-id="${e.id}">
+    <button class="gchk" role="checkbox" aria-checked="${have}" aria-label="Je possède ${esc(e.name)} dans ${esc(g.name)}"></button>
+    <button class="gmon" aria-label="Ouvrir la fiche de ${esc(e.name)}"><img loading="lazy" decoding="async" alt="" src="${SPRITE(e.id)}"><span class="gnum">#${String(e.id).padStart(3, '0')}</span></button>
+    <button class="gmain" aria-expanded="${open}"><span class="gtext"><span class="gname">${esc(e.name)}</span><span class="gsum">${esc(e.sum)}</span></span><span class="chev" aria-hidden="true">▾</span></button>
+    <div class="gdetail"${open ? '' : ' hidden'}>${detail}</div>
+  </li>`;
+}
+
+function updateGameUi() {
+  const list = prep(curGame().id), own = gameSet();
+  let have = 0;
+  list.forEach(e => { if (own.has(e.id)) have++; });
+  const total = list.length;
+  $('gCount').textContent = `${have} / ${total} possédés`;
+  $('gBar').style.width = total ? `${Math.round(have / total * 100)}%` : '0%';
+  $('gReset').disabled = have === 0;
+  $('fAll').innerHTML = `Tous<small>${total}</small>`;
+  $('fMiss').innerHTML = `Manquants<small>${total - have}</small>`;
+  $('fOwn').innerHTML = `Possédés<small>${have}</small>`;
+}
+
+function renderGames() {
+  const g = curGame(), own = gameSet();
+  const q = norm(gameQuery.trim()).replace(/^#/, '');
+  const digits = /^\d+$/.test(q);
+  const items = prep(g.id).filter(e => {
+    if (gameFilter === 'missing' && own.has(e.id)) return false;
+    if (gameFilter === 'owned' && !own.has(e.id)) return false;
+    if (!q) return true;
+    return digits ? e.id === Number(q) : e.hay.includes(q);
+  });
+  $('gList').innerHTML = items.length
+    ? items.map(e => rowHtml(e, own.has(e.id), gameOpen.has(`${g.id}:${e.id}`))).join('')
+    : '<li class="empty">Aucun Pokémon ne correspond.</li>';
+  updateGameUi();
+}
+
+function toggleGameOwned(id, li) {
+  const own = gameSet();
+  if (own.has(id)) own.delete(id); else own.add(id);
+  saveGameOwned();
+  li.querySelector('.gchk').setAttribute('aria-checked', String(own.has(id)));
+  updateGameUi();
+}
+
+$('gList').addEventListener('click', e => {
+  const li = e.target.closest('.grow');
+  if (!li) return;
+  const id = Number(li.dataset.id);
+  if (e.target.closest('.gchk')) { toggleGameOwned(id, li); return; }
+  if (e.target.closest('.gmon')) { select(id); return; }
+  const main = e.target.closest('.gmain');
+  if (!main) return;
+  const det = li.querySelector('.gdetail');
+  if (!det.firstElementChild) return;
+  const open = det.hidden;
+  det.hidden = !open;
+  main.setAttribute('aria-expanded', String(open));
+  const key = `${curGame().id}:${id}`;
+  if (open) gameOpen.add(key); else gameOpen.delete(key);
+});
+
+$('gQ').addEventListener('input', e => { gameQuery = e.target.value; renderGames(); });
+document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+  gameFilter = b.dataset.f;
+  document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  renderGames();
+}));
+$('gReset').addEventListener('click', () => {
+  const own = gameSet();
+  if (!own.size) return;
+  if (!confirm(`Décocher les ${own.size} Pokémon cochés dans ${curGame().name} ? Cette action est définitive.`)) return;
+  own.clear();
+  saveGameOwned();
+  renderGames();
+});
+
+function buildGamePicker() {
+  const box = $('gPicker');
+  GAMES.forEach(g => {
+    const b = document.createElement('button');
+    b.className = 'gchip';
+    b.dataset.game = g.id;
+    b.innerHTML = `<b>${esc(g.name)}</b><span>${esc(g.region)} · Gén. ${g.gen}</span>`;
+    b.addEventListener('click', () => setGame(g.id));
+    box.appendChild(b);
+  });
+}
+function setGame(id) {
+  activeGameId = (GAMES.find(g => g.id === id) || GAMES[0]).id;
+  store.set('cries-game', activeGameId);
+  document.querySelectorAll('.gchip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.game === activeGameId)));
+  gameQuery = '';
+  $('gQ').value = '';
+  applyAccent();
+  renderGames();
+}
+
+function setTab(t, save) {
+  if (t !== 'dex' && t !== 'games') t = 'dex';
+  scrollPos[activeTab] = window.scrollY;
+  activeTab = t;
+  $('viewDex').hidden = t !== 'dex';
+  $('viewGames').hidden = t !== 'games';
+  $('tabDex').setAttribute('aria-selected', String(t === 'dex'));
+  $('tabGames').setAttribute('aria-selected', String(t === 'games'));
+  if (save) store.set('cries-tab', t);
+  applyAccent();
+  if (t === 'games') renderGames();
+  window.scrollTo({ top: scrollPos[t] || 0 });
+}
+$('tabDex').addEventListener('click', () => setTab('dex', true));
+$('tabGames').addEventListener('click', () => setTab('games', true));
+
+buildGamePicker();
+setGame(store.get('cries-game') || GAMES[0].id);
+setTab(store.get('cries-tab') || 'dex', false);
+</script>
+</body>
+</html>
