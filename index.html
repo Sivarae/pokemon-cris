@@ -692,12 +692,12 @@ function markGameRare() {
 
 function render() {
   markGameRare();
-  const q = $('q').value.trim().toLowerCase();
+  const q = norm($('q').value.trim());
   const grid = $('grid');
   const items = [];
   for (let id = currentGen.from; id <= currentGen.to; id++) {
     const name = names[id] || '';
-    if (q && !(name.toLowerCase().includes(q) || String(id) === q.replace(/^#/, '') || String(id).padStart(3, '0').includes(q.replace(/^#/, '')))) continue;
+    if (q && !(norm(name).includes(q) || String(id) === q.replace(/^#/, '') || String(id).padStart(3, '0').includes(q.replace(/^#/, '')))) continue;
     items.push({ id, name });
   }
   shownCount = items.length;
@@ -1205,7 +1205,7 @@ const GAME_METHOD = {
   'feebas-tile-fishing': 'Pêche sur une case à Barpau', 'roaming-water': 'Errant (sur l’eau)',
 };
 const gm = m => GAME_METHOD[m] || prettify(m);
-const norm = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+function norm(s) { return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
 const baseArea = a => a.replace(/\s*\(.*\)\s*$/, '');
 
 /* Pokémon possédés, séparément pour chaque jeu */
